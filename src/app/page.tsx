@@ -2,9 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getMatches, getPendingFor, getPlayers, type PlayerRow } from "@/lib/db";
 import { RP, rankFromRp } from "@/lib/engine/ranks";
+import { runRatingPeriods } from "@/lib/rating";
 import { getSession } from "@/lib/session";
 import { RankBadge, RpDelta } from "@/components/rank";
-import { confirmAction, disputeAction, recalcAction } from "./actions";
+import { confirmAction, disputeAction } from "./actions";
 
 // Every view here changes the moment a match is confirmed, so nothing is
 // prerendered. (No runtime = "edge" — it breaks page loading under OpenNext,
@@ -24,7 +25,14 @@ export default async function LadderPage({
 
   // Fold any closed weeks into MMR before rendering, so the ladder is never
   // stale just because no cron has run. It's a no-op once caught up.
-  await recalcAction();
+  //
+  // This calls runRatingPeriods directly rather than the recalcAction server
+  // action, because that action ends with revalidatePath("/") and Next throws
+  // "Route / used revalidatePath during render" if a cache invalidation is
+  // requested from a component. There is nothing to invalidate here anyway:
+  // the page is force-dynamic and reads the updated rows further down in this
+  // same render.
+  await runRatingPeriods(group.id);
 
   const [players, pending, recent] = await Promise.all([
     getPlayers(group.id),
