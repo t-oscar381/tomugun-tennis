@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+/**
+ * Court-at-night palette. The ladder is the product, so tier colour is the
+ * only strong hue in the system — everything else stays near-neutral so a
+ * Diamond badge actually reads as special.
+ */
+@theme {
+  --color-court: #0b1220;
+  --color-court-2: #111c2e;
+  --color-line: #1e2c44;
+  --color-ink: #e8eef7;
+  --color-muted: #8a9ab3;
+  --color-ace: #c8f560;
+
+  --color-bronze: #b06f3c;
+  --color-silver: #9fb0c4;
+  --color-gold: #e0b13c;
+  --color-platinum: #63d7d0;
+  --color-diamond: #7aa5ff;
+  --color-master: #ff6f91;
+}
+
+html {
+  background: var(--color-court);
+  color: var(--color-ink);
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  /* Room for the fixed bottom bar on phones. */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Tabular figures everywhere a score or RP appears, so numbers don't jitter. */
+.nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
