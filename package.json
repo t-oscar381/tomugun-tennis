@@ -8,9 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "cf:build": "opennextjs-cloudflare build",
-    "cf:preview": "opennextjs-cloudflare build && wrangler dev",
-    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "cf:build": "node scripts/cf-build.mjs",
+    "cf:preview": "node scripts/cf-build.mjs && wrangler dev",
+    "cf:deploy": "node scripts/cf-build.mjs && opennextjs-cloudflare deploy",
     "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {

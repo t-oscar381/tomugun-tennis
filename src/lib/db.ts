@@ -18,12 +18,32 @@ let cached: SupabaseClient | null = null;
 export function db(): SupabaseClient {
   if (cached) return cached;
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  // SUPABASE_URL, not NEXT_PUBLIC_SUPABASE_URL, and that matters more than it
+  // looks. Next *inlines* every NEXT_PUBLIC_ name into the bundle at build
+  // time — the compiled output contains the literal string and no
+  // `process.env` lookup at all. So the value is frozen to whatever the
+  // machine that ran the build happened to have, and the Cloudflare variable
+  // of the same name is silently ignored at runtime.
+  //
+  // Nothing here is ever read from the browser (all access is server-side
+  // service-role), so there is no reason to expose it publicly. Dropping the
+  // prefix makes it a genuine runtime lookup, which means wrangler.jsonc vars
+  // and dashboard Secrets actually govern it — and a CI build with no
+  // .env.local produces a working Worker instead of one with `undefined`
+  // baked in. The old name stays as a fallback so an older deploy keeps working.
+  const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {
     throw new Error(
-      "NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are not set. " +
+      "SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are not set. " +
         "Copy .env.example to .env.local and fill them in.",
+    );
+  }
+  if (!url.startsWith("http")) {
+    // Guards the exact mistake of pasting a publishable key into the URL slot:
+    // supabase-js would otherwise fail later with an opaque fetch error.
+    throw new Error(
+      `SUPABASE_URL must be the project URL (https://<ref>.supabase.co), got "${url.slice(0, 12)}…".`,
     );
   }
 

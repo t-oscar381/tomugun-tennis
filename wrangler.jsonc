@@ -12,15 +12,22 @@
   // and process.env access.
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
 
-  // Non-secret runtime vars, committed on purpose. `wrangler deploy` wipes any
-  // plain variable set in the dashboard that isn't declared here, on EVERY
-  // deploy — Cloudflare documents this as intended. Keeping them here means
-  // they survive. SUPABASE_SERVICE_ROLE_KEY stays out of this file and out of
-  // git: set it as a Secret (not a Variable) in the dashboard, because deploys
-  // never touch secrets.
+  // Non-secret runtime vars, committed on purpose. THIS FILE IS THE SOURCE OF
+  // TRUTH for them: `wrangler deploy` wipes any plain variable set in the
+  // dashboard that isn't declared here, on EVERY deploy — Cloudflare documents
+  // this as intended. Editing these in the dashboard is therefore pointless;
+  // edit them here.
+  //
+  // None of these carry a NEXT_PUBLIC_ prefix on purpose. Next inlines those
+  // into the bundle at build time, which would freeze them to whatever the
+  // build machine had and make the values below dead weight. See src/lib/db.ts.
+  //
+  // SUPABASE_SERVICE_ROLE_KEY stays out of this file and out of git: set it as
+  // a Secret (not a Variable) in the dashboard. Deploys never touch secrets,
+  // and Secrets take precedence over anything baked into the bundle.
   "vars": {
-    "NEXT_PUBLIC_SUPABASE_URL": "https://kufmpppkpmjcmsyeztdm.supabase.co",
-    "NEXT_PUBLIC_GROUP_SLUG": "jakarta",
+    "SUPABASE_URL": "https://kufmpppkpmjcmsyeztdm.supabase.co",
+    "GROUP_SLUG": "jakarta",
     "SITE_URL": "https://play-tennis.tomugun.com"
   },
 
