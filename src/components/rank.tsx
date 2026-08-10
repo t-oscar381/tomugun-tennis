@@ -82,7 +82,7 @@ export function RpDelta({ delta }: { delta: number }) {
   if (delta === 0) return <span className="text-[var(--color-muted)]">—</span>;
   const up = delta > 0;
   return (
-    <span className={`nums font-semibold ${up ? "text-[var(--color-ace)]" : "text-[#ff8080]"}`}>
+    <span className={`nums font-semibold ${up ? "text-[var(--color-win)]" : "text-[var(--color-loss)]"}`}>
       {up ? "+" : ""}
       {delta}
     </span>

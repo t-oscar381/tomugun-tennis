@@ -56,10 +56,10 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             <p className="nums mt-1 text-sm text-[var(--color-muted)]">
               {player.wins}-{player.losses} · {winRate}% wins
               {player.streak >= 3 && (
-                <span className="ml-2 text-[var(--color-ace)]">🔥 {player.streak} in a row</span>
+                <span className="ml-2 text-[var(--color-win)]">🔥 {player.streak} in a row</span>
               )}
               {player.streak <= -3 && (
-                <span className="ml-2 text-[#ff8080]">{Math.abs(player.streak)} straight losses</span>
+                <span className="ml-2 text-[var(--color-loss)]">{Math.abs(player.streak)} straight losses</span>
               )}
             </p>
           </div>
@@ -77,7 +77,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             </p>
           </div>
         ) : (
-          <div className="space-y-3 rounded-xl border border-[var(--color-line)] bg-[var(--color-court-2)] p-4">
+          <div className="space-y-3 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
             <RankProgress rp={player.rp} />
             <div className="flex items-center justify-between">
               <StakeNote rp={player.rp} />
@@ -94,7 +94,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">
             Rivalries
           </h2>
-          <ul className="divide-y divide-[var(--color-line)] overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-court-2)]">
+          <ul className="divide-y divide-[var(--color-line)] overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)]">
             {rivalries.map((r) => {
               const lost = r.played - r.won;
               const leading = r.won > lost;
@@ -105,7 +105,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                   </Link>
                   <span
                     className={`nums text-sm font-semibold ${
-                      leading ? "text-[var(--color-ace)]" : lost > r.won ? "text-[#ff8080]" : ""
+                      leading ? "text-[var(--color-win)]" : lost > r.won ? "text-[var(--color-loss)]" : ""
                     }`}
                   >
                     {r.won}-{lost}
@@ -141,11 +141,11 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
               return (
                 <li
                   key={m.id}
-                  className="flex items-center justify-between rounded-lg border border-[var(--color-line)] bg-[var(--color-court-2)] px-3 py-2 text-sm"
+                  className="flex items-center justify-between rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm"
                 >
                   <div className="min-w-0">
                     <p className="truncate">
-                      <span className={won ? "text-[var(--color-ace)]" : "text-[#ff8080]"}>
+                      <span className={won ? "text-[var(--color-win)]" : "text-[var(--color-loss)]"}>
                         {won ? "W" : "L"}
                       </span>{" "}
                       <span className="text-[var(--color-muted)]">vs</span>{" "}

@@ -47,8 +47,8 @@ export function LogForm({
               onClick={() => setOpponentId(o.id)}
               className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left text-sm ${
                 opponentId === o.id
-                  ? "border-[var(--color-ace)] bg-[var(--color-ace)]/10"
-                  : "border-[var(--color-line)] bg-[var(--color-court-2)]"
+                  ? "border-[var(--color-clay)] bg-[var(--color-clay)]/10"
+                  : "border-[var(--color-line)] bg-[var(--color-surface)]"
               }`}
             >
               <span className="min-w-0 truncate">
@@ -81,9 +81,9 @@ export function LogForm({
               className={`rounded-lg border px-3 py-3 font-semibold ${
                 outcome === v
                   ? v === "won"
-                    ? "border-[var(--color-ace)] bg-[var(--color-ace)]/15 text-[var(--color-ace)]"
-                    : "border-[#ff8080] bg-[#ff8080]/10 text-[#ff8080]"
-                  : "border-[var(--color-line)] bg-[var(--color-court-2)] text-[var(--color-muted)]"
+                    ? "border-[var(--color-win)] bg-[var(--color-win)]/15 text-[var(--color-win)]"
+                    : "border-[var(--color-loss)] bg-[var(--color-loss)]/10 text-[var(--color-loss)]"
+                  : "border-[var(--color-line)] bg-[var(--color-surface)] text-[var(--color-muted)]"
               }`}
             >
               I {v}
@@ -100,7 +100,7 @@ export function LogForm({
           inputMode="numeric"
           autoComplete="off"
           placeholder={placeholder}
-          className="nums w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-court-2)] px-3 py-3 text-lg tracking-wide outline-none focus:border-[var(--color-ace)]"
+          className="nums w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-3 text-lg tracking-wide outline-none focus:border-[var(--color-clay)]"
         />
         <span className="block text-xs text-[var(--color-muted)]">
           Tiebreak sets take the loser&apos;s points: <span className="nums">7-6(4)</span>. A
@@ -108,11 +108,11 @@ export function LogForm({
         </span>
       </label>
 
-      {state.error && <p className="text-sm text-[#ff8080]">{state.error}</p>}
+      {state.error && <p className="text-sm text-[var(--color-loss)]">{state.error}</p>}
 
       <button
         disabled={pending || !opponentId}
-        className="w-full rounded-lg bg-[var(--color-ace)] px-4 py-3 font-bold text-[var(--color-court)] disabled:opacity-40"
+        className="w-full rounded-lg bg-[var(--color-clay)] px-4 py-3 font-bold text-[var(--color-bg)] disabled:opacity-40"
       >
         {pending ? "Saving…" : "Log it"}
       </button>

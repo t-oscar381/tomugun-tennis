@@ -81,7 +81,9 @@ async function main() {
 
   // Players.
   const ids = new Map<string, string>();
-  for (const s of ROSTER) {
+  const roster: Seed[] = [...ROSTER];
+
+  for (const s of roster) {
     const { data, error } = await supabase
       .from("tennis_players")
       .upsert(
@@ -93,7 +95,29 @@ async function main() {
     if (error) throw new Error(`insert ${s.name}: ${error.message}`);
     ids.set(s.name, data.id as string);
   }
-  console.log(`${ROSTER.length} players ready.`);
+
+  // Real people already in the group play too, otherwise seeding strands them
+  // in placements while eight strangers fill the ladder above them. They get
+  // mid-table skill, so the demo doesn't decide they're brilliant or hopeless.
+  const { data: existing } = await supabase
+    .from("tennis_players")
+    .select("id, name")
+    .eq("group_id", group.id);
+
+  for (const p of existing ?? []) {
+    const name = p.name as string;
+    if (ids.has(name)) continue;
+    ids.set(name, p.id as string);
+    roster.push({
+      name,
+      emoji: "🎾",
+      trueSkill: 1560,
+      consistency: 50,
+      attendance: 0.85,
+    });
+  }
+
+  console.log(`${roster.length} players ready (${roster.length - ROSTER.length} already existed).`);
 
   const rand = mulberry32(20260803);
   const format = FORMATS.bestOf3MatchTB;
@@ -106,7 +130,7 @@ async function main() {
     const period = ratingPeriodOf(playedAt);
 
     const attending = shuffle(
-      ROSTER.filter((s) => rand() < s.attendance),
+      roster.filter((s) => rand() < s.attendance),
       rand,
     );
 

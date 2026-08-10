@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getPlayers } from "@/lib/db";
 import { RP } from "@/lib/engine/ranks";
@@ -30,15 +31,23 @@ export default async function LogPage() {
 
   return (
     <div className="space-y-5">
-      <div className="space-y-1">
+      <div className="space-y-2">
         <h1 className="text-xl font-bold tracking-tight">Log a match</h1>
         <p className="text-sm text-[var(--color-muted)]">
-          Enter it from your side. Your opponent confirms before it counts.
+          Three taps and a score. Fill it in{" "}
+          <span className="text-[var(--color-ink)]">from your own side</span> — your games first,
+          win or lose. Your opponent confirms before anything moves.
+        </p>
+        <p className="text-xs text-[var(--color-muted)]">
+          Not sure how to write the score?{" "}
+          <Link href="/how" className="text-[var(--color-clay)] underline">
+            See the examples
+          </Link>
         </p>
       </div>
 
       {inPlacements ? (
-        <p className="rounded-lg border border-[var(--color-line)] bg-[var(--color-court-2)] px-3 py-2 text-xs text-[var(--color-muted)]">
+        <p className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-xs text-[var(--color-muted)]">
           Placement match {player.matches + 1} of {RP.placementMatches} — no RP at stake yet.
         </p>
       ) : (

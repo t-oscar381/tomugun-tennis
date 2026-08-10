@@ -1,28 +1,43 @@
 @import "tailwindcss";
 
 /**
- * Court-at-night palette. The ladder is the product, so tier colour is the
- * only strong hue in the system — everything else stays near-neutral so a
- * Diamond badge actually reads as special.
+ * ─── BRAND PALETTE ────────────────────────────────────────────────────────
+ * Swap these four values to re-skin the entire app. Everything below is
+ * derived from them, so nothing else needs touching.
  */
 @theme {
-  --color-court: #0b1220;
-  --color-court-2: #111c2e;
-  --color-line: #1e2c44;
-  --color-ink: #e8eef7;
-  --color-muted: #8a9ab3;
-  --color-ace: #c8f560;
+  --color-clay: #ff902a; /* primary action, accents, "up" movement */
+  --color-clay-deep: #9e470d; /* pressed states, depth, warnings */
+  --color-court: #0a523d; /* the green everything sits on */
+  --color-sand: #e3c394; /* warm light tone, secondary surfaces */
 
-  --color-bronze: #b06f3c;
-  --color-silver: #9fb0c4;
-  --color-gold: #e0b13c;
-  --color-platinum: #63d7d0;
-  --color-diamond: #7aa5ff;
-  --color-master: #ff6f91;
+  /* ── Derived surfaces. A shade under --color-court so cards lift off it. */
+  --color-bg: #063528;
+  --color-surface: #0a4634;
+  --color-surface-2: #0d5740;
+  --color-line: #16694e;
+
+  /* ── Text. Warm off-white rather than pure white, to sit with the sand. */
+  --color-ink: #f6ecda;
+  --color-muted: #a9bfb0;
+
+  /* ── State. Deliberately NOT green: a green "win" disappears into a green
+   * background. Mint and coral stay legible against the court. */
+  --color-win: #5fe0a0;
+  --color-loss: #ff7f6e;
+
+  /* ── Rank tiers. Kept distinct from the brand hues so a badge always reads
+   * as a rank rather than as UI chrome. */
+  --color-bronze: #c9803f;
+  --color-silver: #c3cbc6;
+  --color-gold: #f2c94c;
+  --color-platinum: #5fd0c0;
+  --color-diamond: #8ab6ff;
+  --color-master: #ff5c8a;
 }
 
 html {
-  background: var(--color-court);
+  background: var(--color-bg);
   color: var(--color-ink);
   color-scheme: dark;
   -webkit-text-size-adjust: 100%;
@@ -31,12 +46,21 @@ html {
 body {
   font-family:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  /* Room for the fixed bottom bar on phones. */
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Tabular figures everywhere a score or RP appears, so numbers don't jitter. */
+/* Tabular figures wherever a score or RP appears, so numbers don't jitter. */
 .nums {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
+}
+
+/* Respect people who ask for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
