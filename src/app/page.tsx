@@ -5,7 +5,14 @@ import { GROUP_SLUG } from "@/lib/league";
 import { runRatingPeriods } from "@/lib/rating";
 import { getSession } from "@/lib/session";
 import { RankBadge, RpDelta } from "@/components/rank";
-import { FlowDiagram, JoinCta, RankExplainer, Steps } from "@/components/how-it-works";
+import {
+  FlowDiagram,
+  Hero,
+  JoinCta,
+  PhotoStrip,
+  RankExplainer,
+  Steps,
+} from "@/components/how-it-works";
 import { confirmAction, disputeAction } from "./actions";
 
 // Every view here changes the moment a match is confirmed, so nothing is
@@ -231,16 +238,7 @@ async function Welcome() {
   return (
     <div className="space-y-10">
       <section className="space-y-4">
-        <h1 className="text-3xl font-bold leading-tight tracking-tight">
-          Your weekly tennis,
-          <br />
-          <span className="text-[var(--color-clay)]">with a ranking attached.</span>
-        </h1>
-        <p className="text-[var(--color-muted)]">
-          Play your normal friendly matches. Log the score in about ten seconds. Everyone in the
-          group gets a rank that goes up and down for real — so the Tuesday-night match actually
-          means something.
-        </p>
+        <Hero groupName={group?.name} />
         <JoinCta label={group ? `Join ${group.name}` : "Join the league"} />
         <p className="text-center text-xs text-[var(--color-muted)]">
           You&apos;ll need the group code from whoever invited you.
@@ -257,6 +255,8 @@ async function Welcome() {
         <h2 className="text-lg font-bold">The ranks</h2>
         <RankExplainer />
       </section>
+
+      <PhotoStrip />
 
       <section className="space-y-3 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
         <h2 className="font-bold">Two things worth knowing</h2>

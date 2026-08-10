@@ -57,7 +57,6 @@ export async function logMatchAction(_prev: State, form: FormData): Promise<Stat
   const meId = String(form.get("meId") ?? "");
   const oppId = String(form.get("opponentId") ?? "");
   const raw = String(form.get("score") ?? "");
-  const iWon = form.get("outcome") === "won";
 
   if (!meId || !oppId) return { error: "Pick an opponent." };
   if (meId === oppId) return { error: "You can't play yourself." };
@@ -75,17 +74,10 @@ export async function logMatchAction(_prev: State, form: FormData): Promise<Stat
   const parsed = parseScoreline(raw, format);
   if (!parsed.ok) return { error: parsed.error };
 
-  // The score is entered from the logger's perspective, so it has to agree
-  // with the win/loss they picked. Catching this here stops a whole class of
-  // "wrong way round" entries that would otherwise need a dispute to unpick.
-  const scoreSaysIWon = parsed.value.winner === "A";
-  if (scoreSaysIWon !== iWon) {
-    return {
-      error: iWon
-        ? "You marked this a win, but the score reads as a loss. Enter your games first."
-        : "You marked this a loss, but the score reads as a win.",
-    };
-  }
+  // The winner comes from the score itself. The form used to ask separately
+  // and then reject the answer when the two disagreed; there is only one
+  // question worth asking, so there is now only one answer to be wrong.
+  const iWon = parsed.value.winner === "A";
 
   const winProbA = winChance(me, opponent);
 

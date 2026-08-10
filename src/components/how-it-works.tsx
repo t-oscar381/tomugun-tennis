@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ENTRY_COST, RP, TIERS } from "@/lib/engine/ranks";
+import { GALLERY, HERO, STEP_SHOTS, photo } from "@/lib/photos";
 import { tierColor } from "./rank";
 
 /**
@@ -26,7 +27,7 @@ const STEPS = [
   {
     n: 3,
     title: "Log the score",
-    body: "Tap Log a match, pick who you played, tap won or lost, and type the score from your side: 6-4 3-6 [10-8].",
+    body: "Tap Log a match, pick who you played, then tap + and − to build the score. No typing, so you can\u2019t fat-finger a 6-5.",
   },
   {
     n: 4,
@@ -36,7 +37,7 @@ const STEPS = [
   {
     n: 5,
     title: "Your rank moves",
-    body: "Win and you climb. Lose and you slide. Beat someone above you and you jump further.",
+    body: "Win and you climb. Lose and you slide. Beat someone above you and you jump further. No maths to do \u2014 it just moves.",
   },
 ];
 
@@ -113,14 +114,22 @@ export function Steps() {
       {STEPS.map((s) => (
         <li
           key={s.n}
-          className="flex gap-3 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-4"
+          className="flex items-center gap-3 overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)]"
         >
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-clay)] text-sm font-bold text-[var(--color-bg)]">
-            {s.n}
-          </span>
-          <span className="min-w-0">
-            <span className="block font-semibold">{s.title}</span>
-            <span className="mt-0.5 block text-sm text-[var(--color-muted)]">{s.body}</span>
+          <img
+            src={photo(STEP_SHOTS[s.n - 1]!.id, 200)}
+            alt={STEP_SHOTS[s.n - 1]!.alt}
+            loading="lazy"
+            className="h-24 w-20 shrink-0 object-cover sm:w-28"
+          />
+          <span className="flex min-w-0 flex-1 gap-3 p-4">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-clay)] text-sm font-bold text-[var(--color-bg)]">
+              {s.n}
+            </span>
+            <span className="min-w-0">
+              <span className="block font-semibold">{s.title}</span>
+              <span className="mt-0.5 block text-sm text-[var(--color-muted)]">{s.body}</span>
+            </span>
           </span>
         </li>
       ))}
@@ -170,5 +179,59 @@ export function JoinCta({ label = "Join the league" }: { label?: string }) {
     >
       {label}
     </Link>
+  );
+}
+
+
+/** Full-bleed opening image with the promise written over it. */
+export function Hero({ groupName }: { groupName?: string }) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl">
+      <img
+        src={photo(HERO.id, 1200, 75)}
+        alt={HERO.alt}
+        className="h-[62vh] max-h-[520px] w-full object-cover"
+      />
+      {/* Two stops rather than one: the text sits on solid colour, while the
+          top of the photo stays bright enough to still read as a photo. */}
+      <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-bg)] via-[var(--color-bg)]/55 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 p-6">
+        <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
+          All your tennis,
+          <br />
+          <span className="text-[var(--color-clay)]">one ladder.</span>
+        </h1>
+        <p className="mt-2 max-w-sm text-sm text-[var(--color-ink)]/85">
+          {groupName ? `${groupName} — ` : ""}play your normal friendly matches, log the score in
+          ten seconds, and watch your rank actually move.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** Photo strip. Placeholders until the group has its own match photos. */
+export function PhotoStrip() {
+  return (
+    <div>
+      <div className="grid grid-cols-3 gap-2">
+        {GALLERY.map((shot) => (
+          <img
+            key={shot.id}
+            src={photo(shot.id, 400)}
+            alt={shot.alt}
+            loading="lazy"
+            className="aspect-square w-full rounded-xl object-cover"
+          />
+        ))}
+      </div>
+      <p className="mt-2 text-center text-xs text-[var(--color-muted)]">
+        Placeholder photography via{" "}
+        <a href="https://unsplash.com" target="_blank" rel="noopener" className="underline">
+          Unsplash
+        </a>{" "}
+        — swap in your own court shots.
+      </p>
+    </div>
   );
 }

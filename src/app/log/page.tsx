@@ -34,14 +34,13 @@ export default async function LogPage() {
       <div className="space-y-2">
         <h1 className="text-xl font-bold tracking-tight">Log a match</h1>
         <p className="text-sm text-[var(--color-muted)]">
-          Three taps and a score. Fill it in{" "}
-          <span className="text-[var(--color-ink)]">from your own side</span> — your games first,
-          win or lose. Your opponent confirms before anything moves.
+          Pick who you played, then tap <span className="text-[var(--color-ink)]">+</span> and{" "}
+          <span className="text-[var(--color-ink)]">−</span> to build the score. No typing, and we
+          work out who won. Your opponent confirms before anything moves.
         </p>
         <p className="text-xs text-[var(--color-muted)]">
-          Not sure how to write the score?{" "}
           <Link href="/how" className="text-[var(--color-clay)] underline">
-            See the examples
+            How scoring works
           </Link>
         </p>
       </div>
@@ -59,11 +58,7 @@ export default async function LogPage() {
           Nobody else has joined this league yet.
         </p>
       ) : (
-        <LogForm
-          meId={player.id}
-          opponents={opponents}
-          placeholder={format.decidingSetIsMatchTiebreak ? "6-4 3-6 [10-8]" : "6-4 3-6 7-5"}
-        />
+        <LogForm meId={player.id} opponents={opponents} format={format} />
       )}
     </div>
   );
