@@ -2,44 +2,44 @@
 
 /**
  * ─── BRAND PALETTE ────────────────────────────────────────────────────────
- * Swap these four values to re-skin the entire app. Everything below is
- * derived from them, so nothing else needs touching.
+ * Light theme. The dark court-green version read as heavy and made scores
+ * hard to scan outdoors in sunlight, which is exactly when this app gets
+ * used. Swap the four brand values to re-skin; everything else derives.
  */
 @theme {
-  --color-clay: #ff902a; /* primary action, accents, "up" movement */
-  --color-clay-deep: #9e470d; /* pressed states, depth, warnings */
-  --color-court: #0a523d; /* the green everything sits on */
-  --color-sand: #e3c394; /* warm light tone, secondary surfaces */
+  --color-clay: #e8791b; /* primary action. Deepened from #ff902a so white-on-clay clears AA */
+  --color-clay-soft: #fff1e3; /* tinted fill for selected states */
+  --color-court: #0a523d; /* deep green — headings and the dark button */
+  --color-sand: #e3c394;
 
-  /* ── Derived surfaces. A shade under --color-court so cards lift off it. */
-  --color-bg: #063528;
-  --color-surface: #0a4634;
-  --color-surface-2: #0d5740;
-  --color-line: #16694e;
+  /* ── Surfaces. Warm, very slightly green paper so white cards lift off it. */
+  --color-bg: #f5f7f3;
+  --color-surface: #ffffff;
+  --color-surface-2: #eef3ea;
+  --color-line: #dde5d9;
 
-  /* ── Text. Warm off-white rather than pure white, to sit with the sand. */
-  --color-ink: #f6ecda;
-  --color-muted: #a9bfb0;
+  /* ── Text. Near-black with a green cast rather than pure grey. */
+  --color-ink: #14281f;
+  --color-muted: #64756a;
 
-  /* ── State. Deliberately NOT green: a green "win" disappears into a green
-   * background. Mint and coral stay legible against the court. */
-  --color-win: #5fe0a0;
-  --color-loss: #ff7f6e;
+  /* ── State. On a light ground, green/red finally mean what people expect —
+   * the dark theme had to avoid green because it vanished into the court. */
+  --color-win: #17853f;
+  --color-loss: #cc3b32;
 
-  /* ── Rank tiers. Kept distinct from the brand hues so a badge always reads
-   * as a rank rather than as UI chrome. */
-  --color-bronze: #c9803f;
-  --color-silver: #c3cbc6;
-  --color-gold: #f2c94c;
-  --color-platinum: #5fd0c0;
-  --color-diamond: #8ab6ff;
-  --color-master: #ff5c8a;
+  /* ── Rank tiers, darkened for contrast against white cards. */
+  --color-bronze: #a2652f;
+  --color-silver: #6b7a83;
+  --color-gold: #a8790a;
+  --color-platinum: #0f857a;
+  --color-diamond: #2a63c9;
+  --color-master: #bc1a55;
 }
 
 html {
   background: var(--color-bg);
   color: var(--color-ink);
-  color-scheme: dark;
+  color-scheme: light;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -55,7 +55,13 @@ body {
   font-feature-settings: "tnum";
 }
 
-/* Respect people who ask for less motion. */
+/* Visible focus for keyboard users, which a custom-styled app loses by default. */
+:focus-visible {
+  outline: 2px solid var(--color-clay);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

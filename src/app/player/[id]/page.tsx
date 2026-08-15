@@ -4,7 +4,7 @@ import { getMatches, getPlayer, getPlayers, getRatingHistory } from "@/lib/db";
 import { RP, rankFromRp } from "@/lib/engine/ranks";
 import { getSession } from "@/lib/session";
 import { RankBadge, RankProgress, RpDelta, StakeNote } from "@/components/rank";
-import { leaveAction } from "../../actions";
+import { signOutAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -174,8 +174,8 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
       )}
 
       {isMe && (
-        <form action={leaveAction}>
-          <button className="text-xs text-[var(--color-muted)] underline">Not you? Switch player</button>
+        <form action={signOutAction}>
+          <button className="text-xs text-[var(--color-muted)] underline">Not you? Sign out</button>
         </form>
       )}
     </div>

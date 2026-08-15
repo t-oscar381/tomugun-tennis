@@ -92,7 +92,7 @@ export function JoinForm({ players }: { players: Choice[] }) {
 
       <button
         disabled={pending}
-        className="w-full rounded-lg bg-[var(--color-clay)] px-4 py-3 font-bold text-[var(--color-bg)] disabled:opacity-50"
+        className="w-full rounded-lg bg-[var(--color-clay)] px-4 py-3 font-bold text-white disabled:opacity-50"
       >
         {pending ? "Checking…" : "Enter the league"}
       </button>

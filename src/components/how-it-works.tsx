@@ -27,7 +27,7 @@ const STEPS = [
   {
     n: 3,
     title: "Log the score",
-    body: "Tap Log a match, pick who you played, then tap + and − to build the score. No typing, so you can\u2019t fat-finger a 6-5.",
+    body: "Tap Log a match, pick who you played, then tap the games each of you won. No typing, so you cannot fat-finger a 6-5.",
   },
   {
     n: 4,
@@ -37,7 +37,7 @@ const STEPS = [
   {
     n: 5,
     title: "Your rank moves",
-    body: "Win and you climb. Lose and you slide. Beat someone above you and you jump further. No maths to do \u2014 it just moves.",
+    body: "Win and you climb. Lose and you slide. Beat someone above you and you jump further. No maths to do — it just moves.",
   },
 ];
 
@@ -81,7 +81,7 @@ export function FlowDiagram() {
             textAnchor="middle"
             fontSize={15}
             fontWeight={700}
-            fill="var(--color-bg)"
+            fill="#ffffff"
           >
             {i + 1}
           </text>
@@ -123,7 +123,7 @@ export function Steps() {
             className="h-24 w-20 shrink-0 object-cover sm:w-28"
           />
           <span className="flex min-w-0 flex-1 gap-3 p-4">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-clay)] text-sm font-bold text-[var(--color-bg)]">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-clay)] text-sm font-bold text-white">
               {s.n}
             </span>
             <span className="min-w-0">
@@ -175,7 +175,7 @@ export function JoinCta({ label = "Join the league" }: { label?: string }) {
   return (
     <Link
       href="/join"
-      className="block w-full rounded-xl bg-[var(--color-clay)] px-4 py-3.5 text-center font-bold text-[var(--color-bg)] transition-colors hover:bg-[var(--color-sand)]"
+      className="block w-full rounded-xl bg-[var(--color-clay)] px-4 py-3.5 text-center font-bold text-white transition-colors hover:bg-[var(--color-court)]"
     >
       {label}
     </Link>

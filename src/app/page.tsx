@@ -56,178 +56,244 @@ export default async function HomePage({
   const ranked = players.filter((p) => p.matches >= RP.placementMatches);
   const placing = players.filter((p) => p.matches < RP.placementMatches);
   const myPlacementsLeft = RP.placementMatches - player.matches;
+  const myPosition = ranked.findIndex((p) => p.id === player.id) + 1;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {logged && (
-        <p className="rounded-xl border border-[var(--color-clay)]/40 bg-[var(--color-clay)]/10 px-4 py-3 text-sm text-[var(--color-clay)]">
+        <p className="rounded-xl border border-[var(--color-clay)]/40 bg-[var(--color-clay-soft)] px-4 py-3 text-sm">
           <strong className="font-semibold">Logged.</strong> Your opponent has to confirm it before
           it counts — nudge them if they&apos;re slow.
         </p>
       )}
 
-      {pending.length > 0 && (
-        <section className="space-y-3">
+      {/* Your own standing, first thing, so the page answers "how am I doing?"
+          before it answers anything else. */}
+      <MyStanding
+        player={player}
+        position={myPosition}
+        placementsLeft={myPlacementsLeft}
+        groupName={group.name}
+      />
+
+      {/* Two columns from lg up: the ladder earns the width, everything
+          time-sensitive sits beside it instead of below the fold. */}
+      <div className="grid gap-6 lg:grid-cols-[1fr_20rem] lg:items-start">
+        <div className="space-y-6">
+          <section className="space-y-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="text-lg font-bold tracking-tight">Ladder</h2>
+              <span className="text-sm text-[var(--color-muted)]">{players.length} players</span>
+            </div>
+
+            {ranked.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-[var(--color-line)] p-4 text-sm text-[var(--color-muted)]">
+                Nobody has a rank yet. Everyone plays {RP.placementMatches} matches first, then the
+                ladder appears.
+              </p>
+            ) : (
+              <ol className="divide-y divide-[var(--color-line)] overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)]">
+                {ranked.map((p, i) => (
+                  <LadderRow key={p.id} rank={i + 1} player={p} isMe={p.id === player.id} />
+                ))}
+              </ol>
+            )}
+
+            {placing.length > 0 && (
+              <div className="rounded-xl border border-dashed border-[var(--color-line)] p-4">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+                  Still in placements
+                </h3>
+                <ul className="mt-2 space-y-1.5">
+                  {placing.map((p) => (
+                    <li key={p.id} className="flex items-center justify-between text-sm">
+                      <Link href={`/player/${p.id}`} className="hover:underline">
+                        {p.emoji} {p.name}
+                      </Link>
+                      <span className="nums text-[var(--color-muted)]">
+                        {p.matches}/{RP.placementMatches} matches
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+        </div>
+
+        <aside className="space-y-6">
+          {pending.length > 0 && (
+            <section className="space-y-3">
+              <div>
+                <h2 className="font-bold">Waiting on you</h2>
+                <p className="text-sm text-[var(--color-muted)]">
+                  Check the score is right before it counts.
+                </p>
+              </div>
+              {pending.map((m) => {
+                const opponentId = m.player_a === player.id ? m.player_b : m.player_a;
+                const opponent = byId.get(opponentId);
+                const iWon = m.winner_id === player.id;
+                const asWritten =
+                  m.player_a === player.id
+                    ? m.scoreline
+                    : m.scoreline.split(" ").map(flipSetToken).join(" ");
+
+                return (
+                  <div
+                    key={m.id}
+                    className="rounded-xl border-2 border-[var(--color-clay)]/50 bg-[var(--color-surface)] p-4"
+                  >
+                    <p className="text-sm">
+                      <span className="font-semibold">{opponent?.name ?? "Someone"}</span> says{" "}
+                      <span
+                        className={`font-semibold ${
+                          iWon ? "text-[var(--color-win)]" : "text-[var(--color-loss)]"
+                        }`}
+                      >
+                        {iWon ? "you won" : "you lost"}
+                      </span>
+                    </p>
+                    <p className="nums mt-1 text-lg font-bold">{asWritten}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <form action={confirmAction}>
+                        <input type="hidden" name="matchId" value={m.id} />
+                        <button className="rounded-lg bg-[var(--color-clay)] px-4 py-2 text-sm font-bold text-white">
+                          Yes, that&apos;s right
+                        </button>
+                      </form>
+                      <form action={disputeAction}>
+                        <input type="hidden" name="matchId" value={m.id} />
+                        <button className="rounded-lg border border-[var(--color-line)] px-4 py-2 text-sm text-[var(--color-muted)]">
+                          That&apos;s wrong
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                );
+              })}
+            </section>
+          )}
+
+          <Link
+            href="/log"
+            className="flex items-center justify-between rounded-xl bg-[var(--color-clay)] px-5 py-4 font-bold text-white"
+          >
+            <span>Log a match</span>
+            <span aria-hidden>→</span>
+          </Link>
+
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+              Recent results
+            </h2>
+            {recent.length === 0 ? (
+              <p className="text-sm text-[var(--color-muted)]">No confirmed matches yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {recent.map((m) => {
+                  const a = byId.get(m.player_a);
+                  const b = byId.get(m.player_b);
+                  const aWon = m.winner_id === m.player_a;
+                  const winner = aWon ? a : b;
+                  const loser = aWon ? b : a;
+                  const winnerRp = aWon ? m.rp_delta_a : m.rp_delta_b;
+                  const upset = aWon ? m.win_prob_a < 0.4 : m.win_prob_a > 0.6;
+                  const score = aWon
+                    ? m.scoreline
+                    : m.scoreline.split(" ").map(flipSetToken).join(" ");
+
+                  return (
+                    <li
+                      key={m.id}
+                      className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="min-w-0">
+                          <span className="font-semibold">{winner?.name}</span>
+                          <span className="text-[var(--color-muted)]"> beat </span>
+                          {loser?.name}
+                        </p>
+                        <RpDelta delta={winnerRp} />
+                      </div>
+                      <p className="nums mt-0.5 text-xs text-[var(--color-muted)]">
+                        {score}
+                        {upset && (
+                          <span className="ml-2 rounded bg-[var(--color-master)]/12 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-master)]">
+                            Upset
+                          </span>
+                        )}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+/** The "you" card: rank, record, and what's at stake, above everything else. */
+function MyStanding({
+  player,
+  position,
+  placementsLeft,
+  groupName,
+}: {
+  player: PlayerRow;
+  position: number;
+  placementsLeft: number;
+  groupName: string;
+}) {
+  const winRate = player.matches ? Math.round((player.wins / player.matches) * 100) : 0;
+
+  return (
+    <section className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
+      <p className="text-xs text-[var(--color-muted)]">{groupName}</p>
+      <div className="mt-1 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span
+            aria-hidden
+            className="flex size-12 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-2xl"
+          >
+            {player.emoji}
+          </span>
           <div>
-            <h2 className="font-semibold">Waiting on you</h2>
-            <p className="text-sm text-[var(--color-muted)]">
-              Someone logged a match against you. Check the score is right.
+            <h1 className="text-xl font-bold tracking-tight">{player.name}</h1>
+            <p className="nums text-sm text-[var(--color-muted)]">
+              {player.wins}-{player.losses}
+              {player.matches > 0 && ` · ${winRate}% wins`}
+              {player.streak >= 3 && (
+                <span className="ml-2 font-semibold text-[var(--color-win)]">
+                  🔥 {player.streak} in a row
+                </span>
+              )}
             </p>
           </div>
-          {pending.map((m) => {
-            const opponentId = m.player_a === player.id ? m.player_b : m.player_a;
-            const opponent = byId.get(opponentId);
-            const iWon = m.winner_id === player.id;
-            // Stored scorelines always read from player_a's perspective.
-            const asWritten =
-              m.player_a === player.id
-                ? m.scoreline
-                : m.scoreline.split(" ").map(flipSetToken).join(" ");
+        </div>
 
-            return (
-              <div
-                key={m.id}
-                className="rounded-xl border border-[var(--color-clay)]/40 bg-[var(--color-surface)] p-4"
-              >
-                <p className="text-sm">
-                  <span className="font-semibold">{opponent?.name ?? "Someone"}</span> says{" "}
-                  <span
-                    className={
-                      iWon ? "font-semibold text-[var(--color-win)]" : "font-semibold text-[var(--color-loss)]"
-                    }
-                  >
-                    {iWon ? "you won" : "you lost"}
-                  </span>{" "}
-                  <span className="nums text-[var(--color-muted)]">{asWritten}</span>
-                </p>
-                <div className="mt-3 flex gap-2">
-                  <form action={confirmAction}>
-                    <input type="hidden" name="matchId" value={m.id} />
-                    <button className="rounded-lg bg-[var(--color-clay)] px-4 py-2 text-sm font-bold text-[var(--color-bg)]">
-                      Yes, that&apos;s right
-                    </button>
-                  </form>
-                  <form action={disputeAction}>
-                    <input type="hidden" name="matchId" value={m.id} />
-                    <button className="rounded-lg border border-[var(--color-line)] px-4 py-2 text-sm text-[var(--color-muted)]">
-                      That&apos;s wrong
-                    </button>
-                  </form>
-                </div>
-              </div>
-            );
-          })}
-        </section>
-      )}
-
-      {/* The one thing a signed-in player is here to do. */}
-      <Link
-        href="/log"
-        className="flex items-center justify-between rounded-xl bg-[var(--color-clay)] px-5 py-4 font-bold text-[var(--color-bg)]"
-      >
-        <span>Log a match you just played</span>
-        <span aria-hidden>→</span>
-      </Link>
-
-      {myPlacementsLeft > 0 && (
-        <p className="text-sm text-[var(--color-muted)]">
-          You&apos;re in your first {RP.placementMatches} matches, so nothing is at stake yet —{" "}
-          <span className="text-[var(--color-ink)]">
-            {myPlacementsLeft} more and you get a rank.
-          </span>
-        </p>
-      )}
-
-      <section className="space-y-3">
-        <h1 className="text-xl font-bold tracking-tight">{group.name}</h1>
-
-        {ranked.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-[var(--color-line)] p-4 text-sm text-[var(--color-muted)]">
-            Nobody has a rank yet. Everyone plays {RP.placementMatches} matches first, then the
-            ladder appears.
-          </p>
-        ) : (
-          <ol className="divide-y divide-[var(--color-line)] overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)]">
-            {ranked.map((p, i) => (
-              <LadderRow key={p.id} rank={i + 1} player={p} isMe={p.id === player.id} />
-            ))}
-          </ol>
-        )}
-
-        {placing.length > 0 && (
-          <div className="rounded-xl border border-dashed border-[var(--color-line)] p-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-              Still in placements
-            </h3>
-            <ul className="mt-2 space-y-1.5">
-              {placing.map((p) => (
-                <li key={p.id} className="flex items-center justify-between text-sm">
-                  <Link href={`/player/${p.id}`} className="hover:underline">
-                    {p.emoji} {p.name}
-                  </Link>
-                  <span className="nums text-[var(--color-muted)]">
-                    {p.matches}/{RP.placementMatches} matches
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-          Recent results
-        </h2>
-        {recent.length === 0 ? (
-          <p className="text-sm text-[var(--color-muted)]">No confirmed matches yet.</p>
-        ) : (
-          <ul className="space-y-2">
-            {recent.map((m) => {
-              const a = byId.get(m.player_a);
-              const b = byId.get(m.player_b);
-              const aWon = m.winner_id === m.player_a;
-              const winner = aWon ? a : b;
-              const loser = aWon ? b : a;
-              const winnerRp = aWon ? m.rp_delta_a : m.rp_delta_b;
-              const upset = aWon ? m.win_prob_a < 0.4 : m.win_prob_a > 0.6;
-              const score = aWon ? m.scoreline : m.scoreline.split(" ").map(flipSetToken).join(" ");
-
-              return (
-                <li
-                  key={m.id}
-                  className="flex items-center justify-between rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate">
-                      <span className="font-semibold">{winner?.name}</span>
-                      <span className="text-[var(--color-muted)]"> beat </span>
-                      {loser?.name}
-                      {upset && (
-                        <span className="ml-2 rounded bg-[var(--color-master)]/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-master)]">
-                          Upset
-                        </span>
-                      )}
-                    </p>
-                    <p className="nums text-xs text-[var(--color-muted)]">{score}</p>
-                  </div>
-                  <div className="nums shrink-0 pl-3 text-right text-xs">
-                    <RpDelta delta={winnerRp} />
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-
-      <p className="text-center text-sm text-[var(--color-muted)]">
-        Not sure how any of this works?{" "}
-        <Link href="/how" className="text-[var(--color-clay)] underline">
-          Read the guide
-        </Link>
-      </p>
-    </div>
+        <div className="text-right">
+          {placementsLeft > 0 ? (
+            <>
+              <p className="nums text-2xl font-bold">{placementsLeft}</p>
+              <p className="text-xs text-[var(--color-muted)]">
+                more {placementsLeft === 1 ? "match" : "matches"} to get ranked
+              </p>
+            </>
+          ) : (
+            <>
+              <RankBadge rp={player.rp} size="lg" />
+              <p className="nums mt-1 text-xs text-[var(--color-muted)]">
+                {Math.round(player.rp)} RP{position > 0 && ` · #${position} on the ladder`}
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -239,10 +305,12 @@ async function Welcome() {
     <div className="space-y-10">
       <section className="space-y-4">
         <Hero groupName={group?.name} />
-        <JoinCta label={group ? `Join ${group.name}` : "Join the league"} />
-        <p className="text-center text-xs text-[var(--color-muted)]">
-          You&apos;ll need the group code from whoever invited you.
-        </p>
+        <div className="mx-auto max-w-md space-y-2">
+          <JoinCta label={group ? `Join ${group.name}` : "Join the league"} />
+          <p className="text-center text-xs text-[var(--color-muted)]">
+            You&apos;ll need the group code from whoever invited you.
+          </p>
+        </div>
       </section>
 
       <section className="space-y-4">
@@ -258,20 +326,26 @@ async function Welcome() {
 
       <PhotoStrip />
 
-      <section className="space-y-3 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
-        <h2 className="font-bold">Two things worth knowing</h2>
-        <p className="text-sm text-[var(--color-muted)]">
-          <span className="text-[var(--color-ink)]">Nothing counts until both players agree.</span>{" "}
-          Whoever logs the match, the other one has to confirm the score. No arguing with the
-          leaderboard later.
-        </p>
-        <p className="text-sm text-[var(--color-muted)]">
-          <span className="text-[var(--color-ink)]">Beating the same person over and over</span>{" "}
-          pays less each time. Go find a tougher match.
-        </p>
+      <section className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
+          <h3 className="font-bold">Nothing counts until both agree</h3>
+          <p className="text-sm text-[var(--color-muted)]">
+            Whoever logs the match, the other one has to confirm the score. No arguing with the
+            leaderboard later.
+          </p>
+        </div>
+        <div className="space-y-2 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
+          <h3 className="font-bold">Beating the same person pays less</h3>
+          <p className="text-sm text-[var(--color-muted)]">
+            Each rematch with the same opponent is worth less than the last. Go find a tougher
+            match.
+          </p>
+        </div>
       </section>
 
-      <JoinCta label="Ready — let me in" />
+      <div className="mx-auto max-w-md">
+        <JoinCta label="Ready — let me in" />
+      </div>
     </div>
   );
 }
@@ -281,18 +355,25 @@ function LadderRow({ rank, player, isMe }: { rank: number; player: PlayerRow; is
   const winRate = player.matches ? Math.round((player.wins / player.matches) * 100) : 0;
 
   return (
-    <li className={isMe ? "bg-[var(--color-clay)]/[0.08]" : undefined}>
+    <li className={isMe ? "bg-[var(--color-clay-soft)]" : undefined}>
       <Link href={`/player/${player.id}`} className="flex items-center gap-3 px-3 py-3">
         <span className="nums w-6 shrink-0 text-center text-sm font-bold text-[var(--color-muted)]">
           {rank}
         </span>
-        <span aria-hidden className="text-lg">
+        <span
+          aria-hidden
+          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-lg"
+        >
           {player.emoji}
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate font-semibold">
             {player.name}
-            {isMe && <span className="ml-1.5 text-xs text-[var(--color-clay)]">you</span>}
+            {isMe && (
+              <span className="ml-1.5 rounded bg-[var(--color-clay)] px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">
+                you
+              </span>
+            )}
           </span>
           <span className="nums block text-xs text-[var(--color-muted)]">
             {player.wins}-{player.losses} · {winRate}%

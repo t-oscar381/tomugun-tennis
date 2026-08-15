@@ -44,9 +44,14 @@ export async function joinAction(_prev: State, form: FormData): Promise<State> {
   redirect("/");
 }
 
-export async function leaveAction(): Promise<void> {
+/**
+ * Sign out. Lands on "/" rather than "/join" so the person sees what the app
+ * is before being asked for a code again — which matters when someone signs
+ * out on a shared phone and hands it to a friend.
+ */
+export async function signOutAction(): Promise<void> {
   await clearSession();
-  redirect("/join");
+  redirect("/");
 }
 
 /**

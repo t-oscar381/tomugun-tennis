@@ -34,9 +34,8 @@ export default async function LogPage() {
       <div className="space-y-2">
         <h1 className="text-xl font-bold tracking-tight">Log a match</h1>
         <p className="text-sm text-[var(--color-muted)]">
-          Pick who you played, then tap <span className="text-[var(--color-ink)]">+</span> and{" "}
-          <span className="text-[var(--color-ink)]">−</span> to build the score. No typing, and we
-          work out who won. Your opponent confirms before anything moves.
+          Pick who you played, then tap the games each of you won. No typing, and we work out
+          who won the match. Your opponent confirms before anything moves.
         </p>
         <p className="text-xs text-[var(--color-muted)]">
           <Link href="/how" className="text-[var(--color-clay)] underline">

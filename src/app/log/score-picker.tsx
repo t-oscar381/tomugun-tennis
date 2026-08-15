@@ -13,7 +13,9 @@ import type { MatchFormat } from "@/lib/engine/tennis";
  *
  * Three deliberate choices here:
  *
- *  1. Steppers, not a keyboard. You cannot express an impossible number.
+ *  1. Number chips, not a keyboard. Every legal game count is one tap, so
+ *     6-4 costs two taps instead of ten on a "+" stepper, and an impossible
+ *     number cannot be expressed at all.
  *  2. The winner is *derived* from the score, never asked. The old form asked
  *     twice — "did you win?" and then the score — and then had to reject the
  *     answer when the two disagreed. Asking once removes that entire class of
@@ -108,7 +110,7 @@ export function ScorePicker({
       {Array.from({ length: visibleSets }, (_, i) => {
         const s = sets[i] ?? blank();
         const matchTb = isMatchTiebreakSet(i);
-        const cap = matchTb ? Math.max(format.matchTiebreakTo + 10, 20) : format.tiebreakAt + 1;
+        const cap = matchTb ? format.matchTiebreakTo + 5 : format.tiebreakAt + 1;
         const showTb = !matchTb && isTiebreakSet(s, format);
 
         return (
@@ -120,27 +122,29 @@ export function ScorePicker({
               {matchTb ? `Deciding tiebreak (to ${format.matchTiebreakTo})` : `Set ${i + 1}`}
             </p>
 
-            <Row
-              label="You"
-              value={s.you}
-              max={cap}
-              disabled={disabled}
-              onChange={(v) => update(i, { you: v })}
-            />
-            <Row
-              label={opponentName}
-              value={s.them}
-              max={cap}
-              disabled={disabled}
-              onChange={(v) => update(i, { them: v })}
-            />
+            <div className="space-y-3">
+              <Row
+                label="You"
+                value={s.you}
+                max={cap}
+                disabled={disabled}
+                onChange={(v) => update(i, { you: v })}
+              />
+              <Row
+                label={opponentName}
+                value={s.them}
+                max={cap}
+                disabled={disabled}
+                onChange={(v) => update(i, { them: v })}
+              />
+            </div>
 
             {showTb && (
               <div className="mt-3 border-t border-[var(--color-line)] pt-3">
                 <Row
                   label="Tiebreak — loser's points"
                   value={s.tb ?? DEFAULT_TB}
-                  max={25}
+                  max={format.tiebreakTo + 5}
                   small
                   disabled={disabled}
                   onChange={(v) => update(i, { tb: v })}
@@ -179,62 +183,41 @@ function Row({
   small?: boolean;
   disabled?: boolean;
 }) {
+  const options = Array.from({ length: max + 1 }, (_, i) => i);
+
   return (
-    <div className="flex items-center justify-between gap-3 py-1.5">
+    <div className={small ? "space-y-1.5" : "space-y-2"}>
       <span
-        className={`min-w-0 flex-1 truncate ${
-          small ? "text-xs text-[var(--color-muted)]" : "font-semibold"
+        className={`block truncate ${
+          small ? "text-xs text-[var(--color-muted)]" : "text-sm font-semibold"
         }`}
       >
         {label}
       </span>
-      <div className="flex shrink-0 items-center gap-2">
-        <Step
-          sign="−"
-          ariaLabel={`Decrease ${label}`}
-          disabled={disabled || value <= 0}
-          onClick={() => onChange(Math.max(0, value - 1))}
-        />
-        <span
-          className={`nums text-center font-bold tabular-nums ${
-            small ? "w-8 text-lg" : "w-10 text-2xl"
-          }`}
-        >
-          {value}
-        </span>
-        <Step
-          sign="+"
-          ariaLabel={`Increase ${label}`}
-          disabled={disabled || value >= max}
-          onClick={() => onChange(Math.min(max, value + 1))}
-        />
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((n) => {
+          const picked = n === value;
+          return (
+            <button
+              key={n}
+              type="button"
+              disabled={disabled}
+              aria-pressed={picked}
+              aria-label={`${label}: ${n}`}
+              onClick={() => onChange(n)}
+              // 44px min target: reliable with a thumb, outdoors, in a hurry.
+              className={`nums h-11 min-w-11 flex-1 rounded-xl border text-lg font-bold transition-colors disabled:opacity-30 ${
+                picked
+                  ? "border-[var(--color-clay)] bg-[var(--color-clay)] text-white"
+                  : "border-[var(--color-line)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:border-[var(--color-clay)]"
+              }`}
+            >
+              {n}
+            </button>
+          );
+        })}
       </div>
     </div>
-  );
-}
-
-function Step({
-  sign,
-  onClick,
-  disabled,
-  ariaLabel,
-}: {
-  sign: string;
-  onClick: () => void;
-  disabled?: boolean;
-  ariaLabel: string;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={ariaLabel}
-      disabled={disabled}
-      onClick={onClick}
-      // 44px: the smallest target that stays reliable with a thumb, outdoors.
-      className="size-11 rounded-xl border border-[var(--color-line)] bg-[var(--color-bg)] text-xl font-bold text-[var(--color-ink)] transition-colors active:bg-[var(--color-clay)] active:text-[var(--color-bg)] disabled:opacity-25"
-    >
-      {sign}
-    </button>
   );
 }
 

@@ -85,6 +85,11 @@ join code, then you pick which player you are, stored in a cookie. Anyone with
 the code can claim to be anyone. That's an acceptable trade for a friend group,
 and it's exactly why the confirmation step carries the weight.
 
+Because "pick your name" makes it easy to end up as the wrong person — shared
+phone, borrowed tablet, mis-tap — the header carries an account menu showing
+who you are, your rank, and a sign-out. Signing out lands on `/`, not `/join`,
+so the next person sees what the app is before being asked for a code.
+
 Upgrading is cheap by design — add a nullable `user_id` to `tennis_players` and
 check it in `src/lib/session.ts`. No schema rewrite, no data migration.
 
@@ -98,6 +103,8 @@ check it in `src/lib/session.ts`. No schema rewrite, no data migration.
 | `src/lib/engine/ranks.ts` | Tiers, divisions, entry costs, placements. |
 | `src/lib/rating.ts` | Where a confirmed match becomes ladder movement. |
 | `src/app/actions.ts` | Server actions. Only async exports allowed here — constants live in `src/lib/league.ts`. |
+| `src/app/log/score-picker.tsx` | Tap-only score entry: number chips, derived winner, live scoreboard preview. |
+| `src/app/globals.css` | Light theme. Four brand values at the top re-skin the whole app. |
 
 `npm test` covers the scoring engine and the score validator (31 tests).
 

@@ -38,13 +38,13 @@ export function LogForm({
   const opponent = opponents.find((o) => o.id === opponentId);
 
   return (
-    <form action={action} className="space-y-6">
+    <form action={action} className="grid gap-6 lg:grid-cols-2 lg:items-start">
       <input type="hidden" name="meId" value={meId} />
       <input type="hidden" name="opponentId" value={opponentId} />
 
-      <fieldset>
+      <fieldset className="lg:col-span-1">
         <legend className="mb-2 font-semibold">1. Who did you play?</legend>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
           {opponents.map((o) => {
             const picked = opponentId === o.id;
             return (
@@ -77,7 +77,7 @@ export function LogForm({
         </div>
       </fieldset>
 
-      <fieldset>
+      <fieldset className="lg:col-span-1">
         <legend className="mb-2 font-semibold">2. What was the score?</legend>
         <ScorePicker
           format={format}
@@ -88,14 +88,14 @@ export function LogForm({
       </fieldset>
 
       {state.error && (
-        <p className="rounded-lg border border-[var(--color-loss)]/40 bg-[var(--color-loss)]/10 px-3 py-2 text-sm text-[var(--color-loss)]">
+        <p className="lg:col-span-2 rounded-lg border border-[var(--color-loss)]/40 bg-[var(--color-loss)]/10 px-3 py-2 text-sm text-[var(--color-loss)]">
           {state.error}
         </p>
       )}
 
       <button
         disabled={pending || !opponentId || !scoreOk}
-        className="w-full rounded-xl bg-[var(--color-clay)] px-4 py-4 text-lg font-bold text-[var(--color-bg)] disabled:opacity-40"
+        className="w-full rounded-xl bg-[var(--color-clay)] px-4 py-4 text-lg font-bold text-white disabled:opacity-40 lg:col-span-2"
       >
         {pending
           ? "Saving…"
@@ -106,7 +106,7 @@ export function LogForm({
               : "Finish the score"}
       </button>
 
-      <p className="text-center text-xs text-[var(--color-muted)]">
+      <p className="text-center text-xs text-[var(--color-muted)] lg:col-span-2">
         {opponent
           ? `${opponent.name} has to confirm this before it counts.`
           : "Your opponent confirms it before it counts."}

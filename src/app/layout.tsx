@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { getSession } from "@/lib/session";
+import { AccountMenu } from "@/components/account-menu";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#063528",
+  themeColor: "#f5f7f3",
   width: "device-width",
   initialScale: 1,
 };
@@ -18,36 +19,56 @@ export const viewport: Viewport = {
 export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // The nav differs for signed-in players: "Log" is meaningless until you have
-  // a player, and "How it works" matters most before you do.
   const session = await getSession();
 
   return (
     <html lang="en">
       <body className="min-h-dvh bg-[var(--color-bg)]">
-        <header className="sticky top-0 z-10 border-b border-[var(--color-line)] bg-[var(--color-bg)]/90 backdrop-blur">
-          <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
+        <header className="sticky top-0 z-30 border-b border-[var(--color-line)] bg-[var(--color-bg)]/90 backdrop-blur">
+          <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
             <Link href="/" className="flex items-center gap-2 font-bold tracking-tight">
               <span aria-hidden>🎾</span>
-              <span>Tomugun Tennis</span>
+              <span className="hidden sm:inline">Tomugun Tennis</span>
+              <span className="sm:hidden">Tennis</span>
             </Link>
-            <nav className="flex items-center gap-4 text-sm text-[var(--color-muted)]">
+
+            <nav className="flex items-center gap-2 text-sm sm:gap-4">
               {session ? (
                 <>
-                  <Link href="/" className="hover:text-[var(--color-ink)]">
+                  <Link
+                    href="/"
+                    className="hidden px-1 text-[var(--color-muted)] hover:text-[var(--color-ink)] sm:block"
+                  >
                     Ladder
                   </Link>
-                  <Link href="/log" className="font-semibold text-[var(--color-clay)]">
-                    Log
+                  <Link
+                    href="/log"
+                    className="rounded-full bg-[var(--color-clay)] px-4 py-2 font-bold text-white"
+                  >
+                    Log a match
                   </Link>
+                  <AccountMenu
+                    name={session.player.name}
+                    emoji={session.player.emoji}
+                    playerId={session.player.id}
+                    rp={session.player.rp}
+                    matches={session.player.matches}
+                    groupName={session.group.name}
+                  />
                 </>
               ) : (
                 <>
-                  <Link href="/how" className="hover:text-[var(--color-ink)]">
+                  <Link
+                    href="/how"
+                    className="px-1 text-[var(--color-muted)] hover:text-[var(--color-ink)]"
+                  >
                     How it works
                   </Link>
-                  <Link href="/join" className="font-semibold text-[var(--color-clay)]">
-                    Join
+                  <Link
+                    href="/join"
+                    className="rounded-full bg-[var(--color-clay)] px-4 py-2 font-bold text-white"
+                  >
+                    Sign in
                   </Link>
                 </>
               )}
@@ -55,12 +76,28 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </div>
         </header>
 
-        <main className="mx-auto max-w-2xl px-4 pb-24 pt-6">{children}</main>
+        <main className="mx-auto max-w-5xl px-4 pb-24 pt-6">{children}</main>
 
-        <footer className="mx-auto max-w-2xl px-4 pb-10 text-center text-xs text-[var(--color-muted)]">
+        <footer className="mx-auto max-w-5xl px-4 pb-10 text-center text-xs text-[var(--color-muted)]">
           <Link href="/how" className="hover:text-[var(--color-ink)]">
             How it works
           </Link>
+          {session && (
+            <>
+              <span aria-hidden className="mx-2">
+                ·
+              </span>
+              <span>
+                Signed in as{" "}
+                <Link
+                  href={`/player/${session.player.id}`}
+                  className="font-semibold text-[var(--color-ink)] hover:underline"
+                >
+                  {session.player.name}
+                </Link>
+              </span>
+            </>
+          )}
         </footer>
       </body>
     </html>

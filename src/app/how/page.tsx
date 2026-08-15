@@ -77,7 +77,7 @@ export default async function HowPage() {
       {session ? (
         <Link
           href="/log"
-          className="block w-full rounded-xl bg-[var(--color-clay)] px-4 py-3.5 text-center font-bold text-[var(--color-bg)]"
+          className="block w-full rounded-xl bg-[var(--color-clay)] px-4 py-3.5 text-center font-bold text-white"
         >
           Log a match
         </Link>
