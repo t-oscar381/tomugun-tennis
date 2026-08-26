@@ -4,7 +4,7 @@ import { FlowDiagram, JoinCta, RankExplainer, Steps } from "@/components/how-it-
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "How it works — Tomugun Tennis" };
+export const metadata = { title: "How it works" };
 
 export default async function HowPage() {
   const session = await getSession();

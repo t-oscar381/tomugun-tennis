@@ -96,7 +96,10 @@ export interface MatchRow {
   placement: boolean;
   rating_period: string;
   rated_at: string | null;
+  /** When the match happened. May be back-dated. */
   played_at: string;
+  /** When the row was written — what the dispute window actually measures. */
+  created_at: string;
 }
 
 // ── Queries ────────────────────────────────────────────────────────────────
@@ -178,10 +181,31 @@ export async function getPendingFor(groupId: string, playerId: string): Promise<
   return (data ?? []) as MatchRow[];
 }
 
+/**
+ * Matches this player marked wrong, or had marked wrong against them.
+ *
+ * Disputes were previously write-only: the row flipped to `disputed` and
+ * disappeared from every view, so neither player was ever told the result
+ * needs re-logging. Surfacing them is what makes "that's wrong" a real
+ * workflow rather than a delete button.
+ */
+export async function getDisputedFor(groupId: string, playerId: string): Promise<MatchRow[]> {
+  const { data, error } = await db()
+    .from("tennis_matches")
+    .select("*")
+    .eq("group_id", groupId)
+    .eq("status", "disputed")
+    .or(`player_a.eq.${playerId},player_b.eq.${playerId}`)
+    .order("played_at", { ascending: false })
+    .limit(5);
+  if (error) throw new Error(`getDisputedFor: ${error.message}`);
+  return (data ?? []) as MatchRow[];
+}
+
 export async function getRatingHistory(playerId: string) {
   const { data, error } = await db()
     .from("tennis_rating_history")
-    .select("rating_period, rating_after, rd_after, rp_after, played")
+    .select("rating_period, rating_before, rating_after, rd_after, rp_after, played")
     .eq("player_id", playerId)
     .order("rating_period", { ascending: true });
   if (error) throw new Error(`getRatingHistory: ${error.message}`);

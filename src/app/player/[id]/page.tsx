@@ -1,12 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getMatches, getPlayer, getPlayers, getRatingHistory } from "@/lib/db";
+import { getMatches, getPlayer, getPlayers } from "@/lib/db";
 import { RP, rankFromRp } from "@/lib/engine/ranks";
 import { getSession } from "@/lib/session";
 import { RankBadge, RankProgress, RpDelta, StakeNote } from "@/components/rank";
+import { RpChart } from "@/components/rp-chart";
 import { signOutAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const player = await getPlayer(id);
+  return player ? { title: player.name } : { title: "Player" };
+}
 
 export default async function PlayerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -17,10 +24,11 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   const session = await getSession();
   const isMe = session?.player.id === player.id;
 
-  const [roster, matches, history] = await Promise.all([
+  // rating_history is deliberately not read here — see the note in RpChart on
+  // why its rp_after column cannot reconstruct a curve. One fewer round trip.
+  const [roster, matches] = await Promise.all([
     getPlayers(player.group_id),
-    getMatches(player.group_id, { playerId: player.id, status: "confirmed", limit: 40 }),
-    getRatingHistory(player.id),
+    getMatches(player.group_id, { playerId: player.id, status: "confirmed", limit: 60 }),
   ]);
 
   const byId = new Map(roster.map((p) => [p.id, p]));
@@ -41,6 +49,19 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
     .map(([oppId, rec]) => ({ opponent: byId.get(oppId), ...rec }))
     .filter((r) => r.opponent)
     .sort((a, b) => b.played - a.played);
+
+  // Reconstruct the RP curve by walking the ledger backwards from today's
+  // value, then reversing. Placement matches are excluded: they move no RP,
+  // and the post-placement seed is applied directly rather than as a delta,
+  // so including them would draw a flat run that never happened.
+  const ranked = matches
+    .filter((m) => !m.placement)
+    .slice()
+    .sort((a, b) => new Date(a.played_at).getTime() - new Date(b.played_at).getTime());
+
+  const deltas = ranked.map((m) => (m.player_a === player.id ? m.rp_delta_a : m.rp_delta_b));
+  const start = player.rp - deltas.reduce((a, d) => a + d, 0);
+  const rpSeries = deltas.reduce<number[]>((acc, d) => [...acc, acc[acc.length - 1]! + d], [start]);
 
   const peak = rankFromRp(player.peak_rp);
 
@@ -88,6 +109,8 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
           </div>
         )}
       </section>
+
+      {!inPlacements && <RpChart series={rpSeries} currentRp={player.rp} />}
 
       {rivalries.length > 0 && (
         <section className="space-y-3">
@@ -167,11 +190,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         )}
       </section>
 
-      {history.length > 0 && (
-        <p className="nums text-xs text-[var(--color-muted)]">
-          Rated over {history.length} week{history.length === 1 ? "" : "s"}.
-        </p>
-      )}
+
 
       {isMe && (
         <form action={signOutAction}>

@@ -21,6 +21,17 @@ import { db, ratingPeriodOf, type MatchRow, type PlayerRow } from "./db";
 /** How many times these two have already met — drives repeat decay. */
 export const REPEAT_DECAY = [1, 1, 0.7, 0.45, 0.3, 0.2];
 
+/**
+ * How long an opponent has to dispute a result before it counts anyway.
+ *
+ * Without this, one person who never opens the app freezes that result
+ * permanently: the match sits `pending`, the RP never moves, and the ladder
+ * quietly stops reflecting reality. Silence is treated as agreement — they
+ * had two days and a notification on their home screen, and disputing takes
+ * one tap.
+ */
+export const CONFIRM_WINDOW_HOURS = 48;
+
 export function glickoOf(p: PlayerRow): Glicko {
   return { rating: p.rating, rd: p.rd, vol: p.vol };
 }
@@ -280,4 +291,34 @@ function push<K, V>(map: Map<K, V[]>, key: K, value: V): void {
   const arr = map.get(key);
   if (arr) arr.push(value);
   else map.set(key, [value]);
+}
+
+
+/**
+ * Confirm any pending match whose window has lapsed.
+ *
+ * Runs on ladder load next to runRatingPeriods, so it needs no cron. Leans on
+ * confirmMatch being idempotent, which means a race between two people
+ * loading the page at once cannot pay out twice.
+ */
+export async function autoConfirmStale(groupId: string): Promise<number> {
+  const cutoff = new Date(Date.now() - CONFIRM_WINDOW_HOURS * 3600 * 1000).toISOString();
+
+  const { data, error } = await db()
+    .from("tennis_matches")
+    .select("id")
+    .eq("group_id", groupId)
+    .eq("status", "pending")
+    .lt("created_at", cutoff);
+  if (error) throw new Error(`autoConfirmStale: ${error.message}`);
+
+  const stale = data ?? [];
+  for (const m of stale) await confirmMatch(m.id as string);
+  return stale.length;
+}
+
+/** Hours left to dispute, or 0 once the window has closed. */
+export function hoursLeftToConfirm(createdAt: string): number {
+  const elapsed = (Date.now() - new Date(createdAt).getTime()) / 3600_000;
+  return Math.max(0, Math.ceil(CONFIRM_WINDOW_HOURS - elapsed));
 }

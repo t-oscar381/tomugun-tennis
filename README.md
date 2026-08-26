@@ -69,10 +69,12 @@ from one declared curve — the win rate each tier should demand just to hold
 station (`TARGET_HOLD_WIN_RATE` in `src/lib/engine/ranks.ts`). Change that and
 the whole economy re-solves.
 
-**Nothing counts until the opponent confirms it.** An unverified ledger is
-worse than no ladder. Disputes are a dead end on purpose — the two players sort
-it out and re-log, rather than the app growing an arbitration UI a group of
-friends doesn't need.
+**Nothing counts until the opponent confirms it — for 48 hours.** An unverified
+ledger is worse than no ladder, but so is a ladder frozen by one person who
+never opens the app. After the window lapses, silence counts as agreement
+(`autoConfirmStale`, run on ladder load, so no cron is needed). Disputes send
+the match back for re-logging and surface on both players' home screens until
+someone does; there is deliberately no arbitration UI.
 
 The tuning behind all of this was simulated first, over 120+ seasons — see the
 `rally-rank` project for the measured results and the known trade-off about the
@@ -105,8 +107,11 @@ check it in `src/lib/session.ts`. No schema rewrite, no data migration.
 | `src/app/actions.ts` | Server actions. Only async exports allowed here — constants live in `src/lib/league.ts`. |
 | `src/app/log/score-picker.tsx` | Tap-only score entry: number chips, derived winner, live scoreboard preview. |
 | `src/app/globals.css` | Light theme. Four brand values at the top re-skin the whole app. |
+| `src/components/rp-chart.tsx` | RP curve, rebuilt from the match ledger — see the note there on why `rating_history.rp_after` cannot be used. |
 
-`npm test` covers the scoring engine and the score validator (31 tests).
+`npm test` covers the scoring engine, the score validator and the dispute
+window (36 tests). `npm run selftest` drives the real write path against the
+live database in a throwaway group.
 
 ## Deploying
 
@@ -125,8 +130,16 @@ No `runtime = "edge"` anywhere — it breaks page loading under OpenNext, the
 same way it did in `tomugun-celebration`. Routes use `dynamic = "force-dynamic"`
 instead.
 
+## Known wrinkle
+
+`tennis_rating_history.rp_after` records RP at the moment the weekly Glicko job
+runs, not when RP actually moved (RP moves on confirmation). Under a real
+weekly cadence it is roughly right; after a backfill every row holds the same
+present-day value. Nothing reads it — the RP chart walks `rp_delta` instead —
+but don't trust that column for analytics without fixing it first.
+
 ## Not built yet
 
 The live point-by-point scorekeeper (the engine is ready and tested, the UI
 isn't), doubles (needs TrueSkill-style team ratings, not Glicko), season resets,
-and the WhatsApp share card.
+and per-player emoji/avatar choice.

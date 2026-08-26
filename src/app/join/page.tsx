@@ -4,6 +4,8 @@ import { JoinForm } from "./join-form";
 
 export const dynamic = "force-dynamic";
 
+export const metadata = { title: "Sign in" };
+
 export default async function JoinPage() {
   const group = await getGroupBySlug(GROUP_SLUG);
 

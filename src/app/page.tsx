@@ -1,8 +1,15 @@
 import Link from "next/link";
-import { getGroupBySlug, getMatches, getPendingFor, getPlayers, type PlayerRow } from "@/lib/db";
+import {
+  getDisputedFor,
+  getGroupBySlug,
+  getMatches,
+  getPendingFor,
+  getPlayers,
+  type PlayerRow,
+} from "@/lib/db";
 import { RP, rankFromRp } from "@/lib/engine/ranks";
 import { GROUP_SLUG } from "@/lib/league";
-import { runRatingPeriods } from "@/lib/rating";
+import { CONFIRM_WINDOW_HOURS, autoConfirmStale, hoursLeftToConfirm, runRatingPeriods } from "@/lib/rating";
 import { getSession } from "@/lib/session";
 import { RankBadge, RpDelta } from "@/components/rank";
 import {
@@ -44,11 +51,15 @@ export default async function HomePage({
   // requested from a component. There is nothing to invalidate here anyway:
   // the page is force-dynamic and reads the updated rows further down in this
   // same render.
+  // Silence counts as agreement once the dispute window lapses, otherwise one
+  // person who never opens the app freezes that result forever.
+  await autoConfirmStale(group.id);
   await runRatingPeriods(group.id);
 
-  const [players, pending, recent] = await Promise.all([
+  const [players, pending, disputed, recent] = await Promise.all([
     getPlayers(group.id),
     getPendingFor(group.id, player.id),
+    getDisputedFor(group.id, player.id),
     getMatches(group.id, { limit: 12, status: "confirmed" }),
   ]);
 
@@ -127,7 +138,8 @@ export default async function HomePage({
               <div>
                 <h2 className="font-bold">Waiting on you</h2>
                 <p className="text-sm text-[var(--color-muted)]">
-                  Check the score is right before it counts.
+                  Check the score is right. Anything you don&apos;t answer counts on its own after{" "}
+                  {CONFIRM_WINDOW_HOURS} hours.
                 </p>
               </div>
               {pending.map((m) => {
@@ -155,6 +167,14 @@ export default async function HomePage({
                       </span>
                     </p>
                     <p className="nums mt-1 text-lg font-bold">{asWritten}</p>
+                    <p className="mt-1 text-xs text-[var(--color-muted)]">
+                      {(() => {
+                        const left = hoursLeftToConfirm(m.created_at);
+                        return left > 0
+                          ? `Counts automatically in ${left}h if you don't say otherwise.`
+                          : "About to count automatically.";
+                      })()}
+                    </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <form action={confirmAction}>
                         <input type="hidden" name="matchId" value={m.id} />
@@ -172,6 +192,35 @@ export default async function HomePage({
                   </div>
                 );
               })}
+            </section>
+          )}
+
+          {disputed.length > 0 && (
+            <section className="space-y-2 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
+              <h2 className="font-bold">Needs re-logging</h2>
+              <p className="text-sm text-[var(--color-muted)]">
+                Someone said these scores were wrong, so they never counted. Agree on the score
+                and log it again.
+              </p>
+              <ul className="space-y-1.5 pt-1">
+                {disputed.map((m) => {
+                  const otherId = m.player_a === player.id ? m.player_b : m.player_a;
+                  return (
+                    <li key={m.id} className="nums text-sm text-[var(--color-muted)]">
+                      <span className="text-[var(--color-ink)]">
+                        {byId.get(otherId)?.name ?? "Someone"}
+                      </span>{" "}
+                      — {m.scoreline}
+                    </li>
+                  );
+                })}
+              </ul>
+              <Link
+                href="/log"
+                className="inline-block pt-1 text-sm font-semibold text-[var(--color-clay)] underline"
+              >
+                Log it again
+              </Link>
             </section>
           )}
 

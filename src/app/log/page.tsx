@@ -10,6 +10,8 @@ import { LogForm } from "./log-form";
 
 export const dynamic = "force-dynamic";
 
+export const metadata = { title: "Log a match" };
+
 export default async function LogPage() {
   const session = await getSession();
   if (!session) redirect("/join");

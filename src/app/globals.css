@@ -44,9 +44,17 @@ html {
 }
 
 body {
-  font-family:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Headings carry the display face; body copy stays in Inter for legibility
+   at small sizes and for its tabular figures. */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display), var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.015em;
 }
 
 /* Tabular figures wherever a score or RP appears, so numbers don't jitter. */
