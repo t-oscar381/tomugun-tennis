@@ -46,3 +46,23 @@ export const STEP_SHOTS: Shot[] = [
   { id: "1545151414-8a948e1ea54f", alt: "Two players shaking hands after a match" },
   { id: "1632755898125-36cd72575dde", alt: "A trophy on court" },
 ];
+
+/** One image per play format. All IDs checked to resolve before shipping. */
+export const FORMAT_SHOTS: Record<string, Shot> = {
+  "classic-ladder": {
+    id: "1541744573515-478c959628a0",
+    alt: "A singles player waiting to return serve",
+  },
+  "rotation-singles": {
+    id: "1542446608-e9525230faed",
+    alt: "Two players mid-rally on a singles court",
+  },
+  "rotation-doubles": {
+    id: "1560012057-4372e14c5085",
+    alt: "A doubles pair at the net",
+  },
+  "fixed-doubles": {
+    id: "1515017804404-92b19fdfe6ac",
+    alt: "A doubles team lining up together",
+  },
+};

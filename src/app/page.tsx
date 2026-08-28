@@ -232,6 +232,21 @@ export default async function HomePage({
             <span aria-hidden>→</span>
           </Link>
 
+          <Link
+            href="/formats"
+            className="flex items-center justify-between rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-5 py-4 font-semibold"
+          >
+            <span>
+              Playing as a group?
+              <span className="block text-xs font-normal text-[var(--color-muted)]">
+                Draw a rotation night
+              </span>
+            </span>
+            <span aria-hidden className="text-[var(--color-clay)]">
+              →
+            </span>
+          </Link>
+
           <section className="space-y-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">
               Recent results

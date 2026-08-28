@@ -80,6 +80,29 @@ The tuning behind all of this was simulated first, over 120+ seasons — see the
 `rally-rank` project for the measured results and the known trade-off about the
 top two tiers.
 
+## Ways to play
+
+The ladder is one format of several — see `/formats`.
+
+| Format | Sides | Ranked? |
+|---|---|---|
+| Classic ladder | singles | yes |
+| Rotation night — singles | singles | yes (they're ordinary 1-v-1 matches) |
+| Rotation night — doubles | doubles | **no** — social only |
+| Doubles ladder (fixed partner) | doubles | not built |
+
+`src/lib/engine/rotation.ts` draws the fixtures for a rotation night. It is not
+a shuffle: a naive random draw pairs the same two people three times in five
+rounds and benches one person twice while another never rests. It optimises,
+in priority order, for no repeat partners, level court time, shared byes, and
+only then repeat opponents — a repeat opponent is fine, a repeat *partner*
+defeats the point of the format. Seeded, so "shuffle" is reproducible.
+
+**Doubles results are deliberately not ranked.** The ladder rates individuals
+with Glicko-2; splitting credit between two halves of a winning pair needs a
+team model (TrueSkill). Rating them anyway would put invented numbers beside
+real ones, so doubles nights schedule but don't score.
+
 ## Identity
 
 There is no authentication in v1, and it doesn't pretend otherwise: a group
@@ -108,9 +131,11 @@ check it in `src/lib/session.ts`. No schema rewrite, no data migration.
 | `src/app/log/score-picker.tsx` | Tap-only score entry: number chips, derived winner, live scoreboard preview. |
 | `src/app/globals.css` | Light theme. Four brand values at the top re-skin the whole app. |
 | `src/components/rp-chart.tsx` | RP curve, rebuilt from the match ledger — see the note there on why `rating_history.rp_after` cannot be used. |
+| `src/lib/engine/rotation.ts` | Rotation-night fixture draw. Optimises partner variety and court time, not just randomness. |
+| `src/lib/engine/formats.ts` | The catalogue of play formats, with an honest `status` per entry. |
 
-`npm test` covers the scoring engine, the score validator and the dispute
-window (36 tests). `npm run selftest` drives the real write path against the
+`npm test` covers the scoring engine, the score validator, the dispute window
+and the rotation scheduler's fairness guarantees (44 tests). `npm run selftest` drives the real write path against the
 live database in a throwaway group.
 
 ## Deploying
@@ -142,4 +167,5 @@ but don't trust that column for analytics without fixing it first.
 
 The live point-by-point scorekeeper (the engine is ready and tested, the UI
 isn't), doubles (needs TrueSkill-style team ratings, not Glicko), season resets,
-and per-player emoji/avatar choice.
+per-player emoji/avatar choice, and scoring for doubles rotation nights (which
+needs the team rating model above).

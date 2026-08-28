@@ -93,6 +93,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                     Ladder
                   </Link>
                   <Link
+                    href="/formats"
+                    className="hidden px-1 text-[var(--color-muted)] hover:text-[var(--color-ink)] sm:block"
+                  >
+                    Ways to play
+                  </Link>
+                  <Link
                     href="/log"
                     className="rounded-full bg-[var(--color-clay)] px-4 py-2 font-bold text-white"
                   >
@@ -109,6 +115,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 </>
               ) : (
                 <>
+                  <Link
+                    href="/formats"
+                    className="hidden px-1 text-[var(--color-muted)] hover:text-[var(--color-ink)] sm:block"
+                  >
+                    Ways to play
+                  </Link>
                   <Link
                     href="/how"
                     className="px-1 text-[var(--color-muted)] hover:text-[var(--color-ink)]"
