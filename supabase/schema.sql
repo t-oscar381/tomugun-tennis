@@ -161,3 +161,38 @@ grant all privileges on all sequences in schema public to service_role;
 insert into public.tennis_groups (slug, name, join_code)
 values ('jakarta', 'Jakarta Social Tennis', 'DEUCE')
 on conflict (slug) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- Knockout tournaments.
+--
+-- A one-off event with a fixed field, a draw, and a single winner — a
+-- different question from the running ladder, so it gets its own table rather
+-- than being squeezed into tennis_matches.
+--
+-- The bracket lives in one jsonb column on purpose. It is always read and
+-- written whole, it is small (a 32 draw is 31 matches), and the alternative —
+-- a tennis_bracket_matches table — would mean a join and a transaction every
+-- time somebody taps a winner, for a feature used a handful of times a season.
+-- Its shape is defined by the Bracket type in src/lib/engine/bracket.ts.
+-- ---------------------------------------------------------------------------
+create table if not exists public.tennis_tournaments (
+  id             uuid        primary key default gen_random_uuid(),
+  group_id       uuid        not null references public.tennis_groups(id) on delete cascade,
+  name           text        not null,
+  -- 'solo' = one player per side, 'pair' = two.
+  kind           text        not null default 'solo' check (kind in ('solo', 'pair')),
+  -- Seeded by ladder rank, or drawn out of a hat.
+  seeded         boolean     not null default true,
+  bracket        jsonb       not null,
+  champion_name  text,
+  created_by     uuid        references public.tennis_players(id) on delete set null,
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now()
+);
+
+create index if not exists tennis_tournaments_group_idx
+  on public.tennis_tournaments (group_id, created_at desc);
+
+alter table public.tennis_tournaments enable row level security;
+
+grant all privileges on table public.tennis_tournaments to service_role;

@@ -35,9 +35,26 @@ export interface PlayFormat {
 
 export const PLAY_FORMATS: PlayFormat[] = [
   {
+    id: "knockout",
+    name: "Knockout tournament",
+    tagline: "Singles or pairs · One night, one winner",
+    teamSize: 1,
+    rotating: false,
+    status: "social",
+    href: "/tournaments",
+    blurb:
+      "A proper draw. Everyone in, lose once and you're out, last one standing is king. Sixteen players, sixteen pairs, or any number in between — awkward fields get byes for the top seeds.",
+    bullets: [
+      "Seeded by ladder rank, or drawn out of a hat",
+      "Singles, pairs you pick, or pairs the app draws",
+      "Tap the winner to send them through the bracket",
+    ],
+    bestFor: "A Saturday where you want a champion by the end of it.",
+  },
+  {
     id: "classic-ladder",
-    name: "Classic ladder",
-    tagline: "Singles · Ranked",
+    name: "Running ladder",
+    tagline: "Singles · Ranked · Ongoing",
     teamSize: 1,
     rotating: false,
     status: "live",

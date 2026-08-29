@@ -239,7 +239,7 @@ export default async function HomePage({
             <span>
               Playing as a group?
               <span className="block text-xs font-normal text-[var(--color-muted)]">
-                Draw a rotation night
+                Run a knockout, or draw a rotation night
               </span>
             </span>
             <span aria-hidden className="text-[var(--color-clay)]">

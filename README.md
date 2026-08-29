@@ -86,10 +86,20 @@ The ladder is one format of several — see `/formats`.
 
 | Format | Sides | Ranked? |
 |---|---|---|
-| Classic ladder | singles | yes |
+| Knockout tournament | singles or pairs | no — its own event |
+| Running ladder | singles | yes |
 | Rotation night — singles | singles | yes (they're ordinary 1-v-1 matches) |
 | Rotation night — doubles | doubles | **no** — social only |
 | Doubles ladder (fixed partner) | doubles | not built |
+
+`src/lib/engine/bracket.ts` runs knockout draws. Seeding is built by
+reflection — a bracket of 2n is the bracket of n with each slot followed by its
+mirror — which is what guarantees seeds 1 and 2 can only meet in the final.
+Fields are padded to the *smallest* power of two at or above the entry count,
+so **byes can only ever occur in round 0**: every first-round match always holds
+at least the higher seed. An earlier version tried to advance anyone left alone
+in a later round and confused "no result entered yet" with "no opponent
+possible", crowning a champion after three matches of fifteen.
 
 `src/lib/engine/rotation.ts` draws the fixtures for a rotation night. It is not
 a shuffle: a naive random draw pairs the same two people three times in five
@@ -133,9 +143,11 @@ check it in `src/lib/session.ts`. No schema rewrite, no data migration.
 | `src/components/rp-chart.tsx` | RP curve, rebuilt from the match ledger — see the note there on why `rating_history.rp_after` cannot be used. |
 | `src/lib/engine/rotation.ts` | Rotation-night fixture draw. Optimises partner variety and court time, not just randomness. |
 | `src/lib/engine/formats.ts` | The catalogue of play formats, with an honest `status` per entry. |
+| `src/lib/engine/bracket.ts` | Knockout draws: seeding, byes, advancement, undo. |
 
 `npm test` covers the scoring engine, the score validator, the dispute window
-and the rotation scheduler's fairness guarantees (44 tests). `npm run selftest` drives the real write path against the
+the rotation scheduler's fairness guarantees and the knockout bracket
+(62 tests). `npm run selftest` drives the real write path against the
 live database in a throwaway group.
 
 ## Deploying

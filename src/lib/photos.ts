@@ -65,4 +65,8 @@ export const FORMAT_SHOTS: Record<string, Shot> = {
     id: "1515017804404-92b19fdfe6ac",
     alt: "A doubles team lining up together",
   },
+  knockout: {
+    id: "1557561371-160934834af4",
+    alt: "A player celebrating a win",
+  },
 };

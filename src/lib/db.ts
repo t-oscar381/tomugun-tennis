@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { Bracket } from "./engine/bracket";
 import type { ParsedSet } from "./engine/scoreline";
 
 /**
@@ -210,6 +211,61 @@ export async function getRatingHistory(playerId: string) {
     .order("rating_period", { ascending: true });
   if (error) throw new Error(`getRatingHistory: ${error.message}`);
   return data ?? [];
+}
+
+// ── Tournaments ────────────────────────────────────────────────────────────
+
+export interface TournamentRow {
+  id: string;
+  group_id: string;
+  name: string;
+  kind: "solo" | "pair";
+  seeded: boolean;
+  bracket: Bracket;
+  champion_name: string | null;
+  created_at: string;
+}
+
+export async function getTournaments(groupId: string): Promise<TournamentRow[]> {
+  const { data, error } = await db()
+    .from("tennis_tournaments")
+    .select("*")
+    .eq("group_id", groupId)
+    .order("created_at", { ascending: false })
+    .limit(25);
+
+  // Same graceful degradation as the rest of the app: an un-migrated database
+  // should show "run the schema", not a stack trace.
+  if (error && SCHEMA_MISSING.has(error.code)) return [];
+  if (error) throw new Error(`getTournaments: ${error.message}`);
+  return (data ?? []) as TournamentRow[];
+}
+
+export async function getTournament(id: string): Promise<TournamentRow | null> {
+  const { data, error } = await db()
+    .from("tennis_tournaments")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error && SCHEMA_MISSING.has(error.code)) return null;
+  if (error) throw new Error(`getTournament: ${error.message}`);
+  return (data as TournamentRow) ?? null;
+}
+
+/**
+ * Whether the tournaments table exists yet, so the UI can say so plainly.
+ *
+ * Deliberately a real select rather than `{ head: true }`: PostgREST answers a
+ * HEAD request for a table that does not exist with **no error at all**, so the
+ * head-based version of this check always returned true and the missing-table
+ * banner never appeared. The failure only surfaced on submit, after someone
+ * had filled the whole form in.
+ */
+export async function tournamentsReady(): Promise<boolean> {
+  const { error } = await db().from("tennis_tournaments").select("id").limit(1);
+  if (error && SCHEMA_MISSING.has(error.code)) return false;
+  if (error) throw new Error(`tournamentsReady: ${error.message}`);
+  return true;
 }
 
 /** Monday (UTC) of the week a match belongs to — the Glicko-2 rating period. */

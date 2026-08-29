@@ -93,8 +93,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                     Ladder
                   </Link>
                   <Link
-                    href="/formats"
+                    href="/tournaments"
                     className="hidden px-1 text-[var(--color-muted)] hover:text-[var(--color-ink)] sm:block"
+                  >
+                    Tournaments
+                  </Link>
+                  <Link
+                    href="/formats"
+                    className="hidden px-1 text-[var(--color-muted)] hover:text-[var(--color-ink)] lg:block"
                   >
                     Ways to play
                   </Link>
