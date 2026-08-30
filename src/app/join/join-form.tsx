@@ -9,35 +9,109 @@ interface Choice {
   emoji: string;
 }
 
-export function JoinForm({ players }: { players: Choice[] }) {
-  const [state, action, pending] = useActionState(joinAction, {});
-  const [selected, setSelected] = useState<string>("");
-  const [creating, setCreating] = useState(players.length === 0);
+export function JoinForm({
+  players,
+  unlocked,
+  wrongCode,
+  code,
+}: {
+  players: Choice[];
+  unlocked: boolean;
+  wrongCode: boolean;
+  code: string;
+}) {
+  if (!unlocked) return <CodeStep wrongCode={wrongCode} />;
+  return <IdentityStep players={players} code={code} />;
+}
 
+/**
+ * Step one. A plain GET form, so it works with no JavaScript and leaves the
+ * code in the URL — which is what makes an invite link possible.
+ *
+ * No placeholder here on purpose: it used to read "DEUCE", which was the
+ * actual live code printed on the page.
+ */
+function CodeStep({ wrongCode }: { wrongCode: boolean }) {
   return (
-    <form action={action} className="space-y-5">
+    <form method="get" action="/join" className="space-y-4">
       <label className="block space-y-1.5">
         <span className="text-sm font-semibold">Group code</span>
         <input
-          name="code"
+          name="c"
           required
+          autoFocus
           autoCapitalize="characters"
           autoComplete="off"
-          placeholder="DEUCE"
-          className="nums w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2.5 uppercase tracking-widest outline-none focus:border-[var(--color-clay)]"
+          aria-invalid={wrongCode || undefined}
+          className="nums w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-3 text-lg uppercase tracking-widest outline-none focus:border-[var(--color-clay)]"
         />
       </label>
 
-      {!creating && (
+      {wrongCode && (
+        <p className="text-sm text-[var(--color-loss)]">
+          That code isn&apos;t right. Ask whoever sent you the link.
+        </p>
+      )}
+
+      <button className="w-full rounded-xl bg-[var(--color-clay)] px-4 py-3.5 font-bold text-white">
+        Continue
+      </button>
+    </form>
+  );
+}
+
+/**
+ * Step two. Someone arriving from an invite is almost always new, so "add me"
+ * is the default and picking an existing name is the secondary path — the
+ * reverse of how this used to work, which showed a newcomer ten strangers'
+ * names and no obvious way in.
+ */
+function IdentityStep({ players, code }: { players: Choice[]; code: string }) {
+  const [state, action, pending] = useActionState(joinAction, {});
+  const [selected, setSelected] = useState("");
+  const [creating, setCreating] = useState(true);
+
+  return (
+    <form action={action} className="space-y-5">
+      <input type="hidden" name="code" value={code} />
+
+      {creating ? (
+        <>
+          <label className="block space-y-1.5">
+            <span className="text-sm font-semibold">What should we call you?</span>
+            <input
+              name="newName"
+              required
+              autoFocus
+              maxLength={24}
+              placeholder="Your name"
+              className="w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-3 text-lg outline-none focus:border-[var(--color-clay)]"
+            />
+            <span className="block text-xs text-[var(--color-muted)]">
+              However your group knows you — this is what shows on the ladder.
+            </span>
+          </label>
+
+          {players.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setCreating(false)}
+              className="text-sm text-[var(--color-muted)] underline"
+            >
+              I&apos;m already on the list
+            </button>
+          )}
+        </>
+      ) : (
         <fieldset className="space-y-2">
-          <legend className="text-sm font-semibold">Who are you?</legend>
+          <legend className="text-sm font-semibold">Which one are you?</legend>
           <div className="grid grid-cols-2 gap-2">
             {players.map((p) => (
               <label
                 key={p.id}
                 className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2.5 text-sm ${
                   selected === p.id
-                    ? "border-[var(--color-clay)] bg-[var(--color-clay)]/10"
+                    ? "border-[var(--color-clay)] bg-[var(--color-clay-soft)]"
                     : "border-[var(--color-line)] bg-[var(--color-surface)]"
                 }`}
               >
@@ -62,39 +136,18 @@ export function JoinForm({ players }: { players: Choice[] }) {
             }}
             className="text-sm text-[var(--color-muted)] underline"
           >
-            I&apos;m new — add me
+            I&apos;m not on this list — add me
           </button>
         </fieldset>
-      )}
-
-      {creating && (
-        <label className="block space-y-1.5">
-          <span className="text-sm font-semibold">Your name</span>
-          <input
-            name="newName"
-            maxLength={24}
-            placeholder="Andre"
-            className="w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2.5 outline-none focus:border-[var(--color-clay)]"
-          />
-          {players.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setCreating(false)}
-              className="text-sm text-[var(--color-muted)] underline"
-            >
-              Actually, I&apos;m already on the list
-            </button>
-          )}
-        </label>
       )}
 
       {state.error && <p className="text-sm text-[var(--color-loss)]">{state.error}</p>}
 
       <button
-        disabled={pending}
-        className="w-full rounded-lg bg-[var(--color-clay)] px-4 py-3 font-bold text-white disabled:opacity-50"
+        disabled={pending || (!creating && !selected)}
+        className="w-full rounded-xl bg-[var(--color-clay)] px-4 py-3.5 font-bold text-white disabled:opacity-40"
       >
-        {pending ? "Checking…" : "Enter the league"}
+        {pending ? "Joining…" : "Join the league"}
       </button>
     </form>
   );

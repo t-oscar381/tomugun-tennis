@@ -120,6 +120,17 @@ join code, then you pick which player you are, stored in a cookie. Anyone with
 the code can claim to be anyone. That's an acceptable trade for a friend group,
 and it's exactly why the confirmation step carries the weight.
 
+Joining is two steps: the code, then who you are. They were one screen until
+the roster of every player was being rendered to anyone who opened `/join` —
+so the code gated nothing — and the code itself was sitting in the input's
+`placeholder` attribute in plain sight. The roster is now only sent to someone
+who already has the code.
+
+The code travels in the query string, so **one link carries it**:
+`/join?c=CODE`. That is what you paste into the group chat; signed-in players
+get a copy/WhatsApp card for it on the ladder. Anyone with the link is in,
+which is exactly what a shared group code has always meant here.
+
 Because "pick your name" makes it easy to end up as the wrong person — shared
 phone, borrowed tablet, mis-tap — the header carries an account menu showing
 who you are, your rank, and a sign-out. Signing out lands on `/`, not `/join`,

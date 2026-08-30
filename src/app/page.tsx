@@ -11,6 +11,7 @@ import { RP, rankFromRp } from "@/lib/engine/ranks";
 import { GROUP_SLUG } from "@/lib/league";
 import { CONFIRM_WINDOW_HOURS, autoConfirmStale, hoursLeftToConfirm, runRatingPeriods } from "@/lib/rating";
 import { getSession } from "@/lib/session";
+import { InviteCard } from "@/components/invite-card";
 import { RankBadge, RpDelta } from "@/components/rank";
 import {
   FlowDiagram,
@@ -246,6 +247,11 @@ export default async function HomePage({
               →
             </span>
           </Link>
+
+          <InviteCard
+            inviteUrl={`${process.env.SITE_URL ?? "https://play-tennis.tomugun.com"}/join?c=${encodeURIComponent(group.join_code)}`}
+            code={group.join_code}
+          />
 
           <section className="space-y-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">

@@ -1,12 +1,30 @@
 import { getGroupBySlug, getPlayers } from "@/lib/db";
 import { GROUP_SLUG } from "@/lib/league";
+import { codeMatches } from "@/lib/session";
 import { JoinForm } from "./join-form";
 
 export const dynamic = "force-dynamic";
-
 export const metadata = { title: "Sign in" };
 
-export default async function JoinPage() {
+/**
+ * Joining, in two steps.
+ *
+ * Step one is the code; step two is who you are. They used to be one screen,
+ * which meant the roster of every player was rendered to anyone who opened the
+ * page — so the code protected nothing — and the code itself was sitting in
+ * the input's placeholder attribute, in plain sight.
+ *
+ * The code travels in the query string so a single link can carry it: paste
+ * play-tennis.tomugun.com/join?c=CODE into the group chat and everyone lands
+ * on step two. That is the same secret it always was, shared the same way —
+ * anyone with the link is in, which is the deal for a friend group.
+ */
+export default async function JoinPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ c?: string }>;
+}) {
+  const { c } = await searchParams;
   const group = await getGroupBySlug(GROUP_SLUG);
 
   if (!group) {
@@ -22,24 +40,31 @@ export default async function JoinPage() {
     );
   }
 
-  // Names only — never the join code, and never anything that would let this
-  // page double as a roster leak for a league you're not in.
-  const players = (await getPlayers(group.id)).map((p) => ({
-    id: p.id,
-    name: p.name,
-    emoji: p.emoji,
-  }));
+  const attempted = typeof c === "string" && c.length > 0;
+  const unlocked = attempted && codeMatches(c, group.join_code);
+
+  // The roster is only ever sent to someone who already has the code.
+  const players = unlocked
+    ? (await getPlayers(group.id)).map((p) => ({ id: p.id, name: p.name, emoji: p.emoji }))
+    : [];
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-md space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">{group.name}</h1>
         <p className="text-sm text-[var(--color-muted)]">
-          Real tennis scoring, a ranked ladder that remembers. Enter the group code, then tell us
-          who you are.
+          {unlocked
+            ? "You're in. Now tell us who you are so your matches count for the right person."
+            : "Real tennis, a ranked ladder that remembers. You'll need the group code from whoever invited you."}
         </p>
       </div>
-      <JoinForm players={players} />
+
+      <JoinForm
+        players={players}
+        unlocked={unlocked}
+        wrongCode={attempted && !unlocked}
+        code={unlocked ? c : ""}
+      />
     </div>
   );
 }
