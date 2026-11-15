@@ -50,11 +50,14 @@ function isTiebreakSet(s: SetScore, format: MatchFormat): boolean {
 export function ScorePicker({
   format,
   opponentName,
+  youName = "You",
   disabled,
   onValidityChange,
 }: {
   format: MatchFormat;
   opponentName: string;
+  /** Player 1's label. "You" when logging your own match; a name when refereeing. */
+  youName?: string;
   disabled?: boolean;
   /** Lets the form refuse to submit a score the parser has already rejected. */
   onValidityChange?: (ok: boolean) => void;
@@ -124,7 +127,7 @@ export function ScorePicker({
 
             <div className="space-y-3">
               <Row
-                label="You"
+                label={youName}
                 value={s.you}
                 max={cap}
                 disabled={disabled}
@@ -160,6 +163,7 @@ export function ScorePicker({
         format={format}
         deciderIndex={deciderIndex}
         opponentName={opponentName}
+        youName={youName}
         ok={parsed.ok}
         error={parsed.ok ? null : parsed.error}
         touched={touched}
@@ -227,6 +231,7 @@ function Preview({
   format,
   deciderIndex,
   opponentName,
+  youName,
   ok,
   error,
   touched,
@@ -235,6 +240,7 @@ function Preview({
   format: MatchFormat;
   deciderIndex: number;
   opponentName: string;
+  youName: string;
   ok: boolean;
   error: string | null;
   touched: boolean;
@@ -247,7 +253,7 @@ function Preview({
         <tbody>
           {(
             [
-              { name: "You", pick: (s: SetScore) => s.you, other: (s: SetScore) => s.them, win: youWon },
+              { name: youName, pick: (s: SetScore) => s.you, other: (s: SetScore) => s.them, win: youWon },
               {
                 name: opponentName,
                 pick: (s: SetScore) => s.them,
@@ -294,10 +300,10 @@ function Preview({
 
       <p className="mt-3 text-sm">
         {!touched ? (
-          <span className="text-[var(--color-muted)]">Tap + and − to build the score.</span>
+          <span className="text-[var(--color-muted)]">Tap the games each player won.</span>
         ) : ok ? (
           <span className="font-semibold text-[var(--color-win)]">
-            {youWon ? "You win" : `${opponentName} wins`} — this is what gets logged.
+            {youWon ? (youName === "You" ? "You win" : `${youName} wins`) : `${opponentName} wins`} — this is what gets logged.
           </span>
         ) : (
           <span className="text-[var(--color-loss)]">{error}</span>

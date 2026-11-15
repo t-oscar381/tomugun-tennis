@@ -54,8 +54,8 @@ export default async function JoinPage({
         <h1 className="text-2xl font-bold tracking-tight">{group.name}</h1>
         <p className="text-sm text-[var(--color-muted)]">
           {unlocked
-            ? "You're in. Now tell us who you are so your matches count for the right person."
-            : "Real tennis, a ranked ladder that remembers. You'll need the group code from whoever invited you."}
+            ? "You're in. Add yourself so your matches go in the record under your name."
+            : "A record book for the weekly games. You'll need the group code from whoever invited you."}
         </p>
       </div>
 

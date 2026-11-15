@@ -10,19 +10,26 @@ import {
   getTournament,
   ratingPeriodOf,
 } from "@/lib/db";
+import { isIsoDate, jakartaDate } from "@/lib/dates";
 import { buildBracket, champion, setWinner, type Entrant } from "@/lib/engine/bracket";
 import { parseScoreline } from "@/lib/engine/scoreline";
 import { GROUP_SLUG, formatFor } from "@/lib/league";
+import { cleanName, nameError, nameTaken } from "@/lib/names";
+import { getPlayDay } from "@/lib/db";
+import { matchesOn, openPlayDay, recordMatch, removeMatch, setPresent } from "@/lib/playday";
 import { confirmMatch, runRatingPeriods, winChance } from "@/lib/rating";
 import { clearSession, codeMatches, getSession, setSessionPlayer } from "@/lib/session";
 
 type State = { error?: string };
 
+/** For the play-day forms: a confirmation to show, and a stamp so the client can tell a new one. */
+type PlayState = { error?: string; ok?: string; stamp?: number };
+
 /** Join the league: check the code, then claim (or create) a player. */
 export async function joinAction(_prev: State, form: FormData): Promise<State> {
   const code = String(form.get("code") ?? "");
   const playerId = String(form.get("playerId") ?? "");
-  const newName = String(form.get("newName") ?? "").trim();
+  const newName = cleanName(String(form.get("newName") ?? ""));
 
   const group = await getGroupBySlug(GROUP_SLUG);
   if (!group) return { error: "League not found. Has supabase/schema.sql been run?" };
@@ -35,8 +42,11 @@ export async function joinAction(_prev: State, form: FormData): Promise<State> {
     redirect("/");
   }
 
-  if (!newName) return { error: "Pick a name, or choose who you are." };
-  if (newName.length > 24) return { error: "That name is too long." };
+  const bad = nameError(newName);
+  if (bad) return { error: bad === "Type a name." ? "Type your name, or tap your slot." : bad };
+  if (nameTaken(await getPlayers(group.id), newName)) {
+    return { error: "Someone already has that name — if that's you, tap your slot instead." };
+  }
 
   const { data, error } = await db()
     .from("tennis_players")
@@ -160,9 +170,12 @@ export async function renameAction(_prev: State, form: FormData): Promise<State>
   const session = await getSession();
   if (!session) return { error: "Sign in first." };
 
-  const name = String(form.get("name") ?? "").trim();
-  if (!name) return { error: "Type a name." };
-  if (name.length > 24) return { error: "That name is too long." };
+  const name = cleanName(String(form.get("name") ?? ""));
+  const bad = nameError(name);
+  if (bad) return { error: bad };
+  if (nameTaken(await getPlayers(session.group.id), name, session.player.id)) {
+    return { error: "Someone already has that name." };
+  }
 
   const { error } = await db()
     .from("tennis_players")
@@ -298,4 +311,117 @@ export async function deleteTournamentAction(form: FormData): Promise<void> {
   if (!id) return;
   await db().from("tennis_tournaments").delete().eq("id", id);
   redirect("/tournaments");
+}
+
+
+// ── Play days ──────────────────────────────────────────────────────────────
+
+/** Add a person to the league without signing in as them — and, from a play day, mark them here. */
+export async function addPlayerAction(_prev: PlayState, form: FormData): Promise<PlayState> {
+  const session = await getSession();
+  if (!session) return { error: "Sign in first." };
+
+  const name = cleanName(String(form.get("name") ?? ""));
+  const bad = nameError(name);
+  if (bad) return { error: bad };
+  if (nameTaken(await getPlayers(session.group.id), name)) {
+    return { error: `There's already a ${name}.` };
+  }
+
+  const { data, error } = await db()
+    .from("tennis_players")
+    .insert({ group_id: session.group.id, name })
+    .select("id")
+    .single();
+  if (error) return { error: error.message };
+
+  const sessionId = String(form.get("sessionId") ?? "");
+  if (sessionId) {
+    const day = await getPlayDay(sessionId);
+    if (day && day.group_id === session.group.id) await setPresent(day, data.id as string, true);
+  }
+
+  revalidatePath("/", "layout");
+  return { ok: `Added ${name}.`, stamp: Date.now() };
+}
+
+/** Start today's play day (or any date), with the people who turned up. */
+export async function startPlayDayAction(_prev: State, form: FormData): Promise<State> {
+  const session = await getSession();
+  if (!session) return { error: "Sign in first." };
+
+  const date = String(form.get("date") ?? "") || jakartaDate();
+  if (!isIsoDate(date)) return { error: "That isn't a real date." };
+  // Back-dating is the point (log last night's games this morning); next week is a typo.
+  if (date > jakartaDate(new Date(Date.now() + 24 * 3600 * 1000))) {
+    return { error: "That date hasn't happened yet." };
+  }
+
+  const picked = [...new Set(form.getAll("attendee").map(String))];
+  if (picked.length < 2) return { error: "Tick at least two people who are here." };
+
+  const roster = new Set((await getPlayers(session.group.id)).map((p) => p.id));
+  if (!picked.every((id) => roster.has(id))) return { error: "Someone isn't in this league." };
+
+  const result = await openPlayDay(session.group.id, date, picked, session.player.id);
+  if (!result.ok) return { error: result.error };
+
+  redirect(`/play/${result.day.id}`);
+}
+
+/** Tick someone as here, or not. */
+export async function togglePresentAction(form: FormData): Promise<void> {
+  const session = await getSession();
+  if (!session) return;
+
+  const day = await getPlayDay(String(form.get("sessionId") ?? ""));
+  if (!day || day.group_id !== session.group.id) return;
+
+  const playerId = String(form.get("playerId") ?? "");
+  const present = form.get("present") === "1";
+
+  const roster = new Set((await getPlayers(session.group.id)).map((p) => p.id));
+  if (!roster.has(playerId)) return;
+
+  // Someone who has already played tonight is, self-evidently, here.
+  if (!present) {
+    const played = (await matchesOn(session.group.id, day.played_on)).some(
+      (m) => m.player_a === playerId || m.player_b === playerId,
+    );
+    if (played) return;
+  }
+
+  await setPresent(day, playerId, present);
+  revalidatePath("/", "layout");
+}
+
+/** Log a result under a play day. Whoever is resting can do this for the others. */
+export async function logPlayDayMatchAction(_prev: PlayState, form: FormData): Promise<PlayState> {
+  const session = await getSession();
+  if (!session) return { error: "Sign in first." };
+
+  const day = await getPlayDay(String(form.get("sessionId") ?? ""));
+  if (!day || day.group_id !== session.group.id) return { error: "That play day isn't here." };
+
+  const result = await recordMatch({
+    groupId: session.group.id,
+    day,
+    a: String(form.get("a") ?? ""),
+    b: String(form.get("b") ?? ""),
+    scoreline: String(form.get("score") ?? ""),
+    format: formatFor(session.group),
+    loggedBy: session.player.id,
+  });
+  if (!result.ok) return { error: result.error };
+
+  revalidatePath("/", "layout");
+  return { ok: result.text, stamp: Date.now() };
+}
+
+/** Take a result back out — anyone in the group can, because the room is the safeguard. */
+export async function removePlayDayMatchAction(form: FormData): Promise<void> {
+  const session = await getSession();
+  if (!session) return;
+  await removeMatch(session.group.id, String(form.get("matchId") ?? ""));
+  revalidatePath("/", "layout");
 }

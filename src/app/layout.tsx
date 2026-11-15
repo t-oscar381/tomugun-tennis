@@ -93,6 +93,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                     Records
                   </Link>
                   <Link
+                    href="/play"
+                    className="hidden px-1 text-[var(--color-muted)] hover:text-[var(--color-ink)] sm:block"
+                  >
+                    Play days
+                  </Link>
+                  <Link
                     href="/tournaments"
                     className="hidden px-1 text-[var(--color-muted)] hover:text-[var(--color-ink)] sm:block"
                   >

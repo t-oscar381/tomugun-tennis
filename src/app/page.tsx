@@ -1,5 +1,14 @@
 import Link from "next/link";
-import { getDisputedFor, getGroupBySlug, getMatches, getPendingFor, getPlayers } from "@/lib/db";
+import {
+  getDisputedFor,
+  getGroupBySlug,
+  getMatches,
+  getPendingFor,
+  getPlayDayByDate,
+  getPlayers,
+  sessionsReady,
+} from "@/lib/db";
+import { dateOf, jakartaDate } from "@/lib/dates";
 import { GROUP_SLUG } from "@/lib/league";
 import { CONFIRM_WINDOW_HOURS, autoConfirmStale, hoursLeftToConfirm, runRatingPeriods } from "@/lib/rating";
 import { getSession } from "@/lib/session";
@@ -37,6 +46,11 @@ export default async function HomePage({
     getDisputedFor(group.id, player.id),
     getMatches(group.id, { limit: 12, status: "confirmed" }),
   ]);
+
+  const playDaysOn = await sessionsReady();
+  const today = jakartaDate();
+  const tonight = playDaysOn ? await getPlayDayByDate(group.id, today) : null;
+  const tonightMatches = recent.filter((m) => dateOf(m.played_at) === today).length;
 
   const byId = new Map(players.map((p) => [p.id, p]));
   // The roster starts as single letters; nudge whoever claimed one to put
@@ -176,13 +190,30 @@ export default async function HomePage({
             </section>
           )}
 
-          <Link
-            href="/log"
-            className="flex items-center justify-between rounded-xl bg-[var(--color-clay)] px-5 py-4 font-bold text-white"
-          >
-            <span>Log a match</span>
-            <span aria-hidden>→</span>
-          </Link>
+          {playDaysOn ? (
+            <Link
+              href={tonight ? `/play/${tonight.id}` : "/play"}
+              className="block rounded-xl bg-[var(--color-clay)] px-5 py-4 text-white"
+            >
+              <span className="flex items-center justify-between font-bold">
+                <span>{tonight ? "Tonight's play day" : "Start today's play day"}</span>
+                <span aria-hidden>→</span>
+              </span>
+              <span className="nums mt-0.5 block text-sm opacity-90">
+                {tonight
+                  ? `${tonight.attendees.length} here · ${tonightMatches} logged — tap to log`
+                  : "Tick who turned up, then log the matches"}
+              </span>
+            </Link>
+          ) : (
+            <Link
+              href="/log"
+              className="flex items-center justify-between rounded-xl bg-[var(--color-clay)] px-5 py-4 font-bold text-white"
+            >
+              <span>Log a match</span>
+              <span aria-hidden>→</span>
+            </Link>
+          )}
 
           <InviteCard
             inviteUrl={`${process.env.SITE_URL ?? "https://play-tennis.tomugun.com"}/join?c=${encodeURIComponent(group.join_code)}`}

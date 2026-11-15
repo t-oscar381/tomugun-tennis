@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getPlayers } from "@/lib/db";
+import { getPlayDayByDate, getPlayers, sessionsReady } from "@/lib/db";
+import { jakartaDate } from "@/lib/dates";
 import { getSession } from "@/lib/session";
 import { formatFor } from "@/lib/league";
 import { LogForm } from "./log-form";
@@ -14,6 +15,15 @@ export default async function LogPage() {
   if (!session) redirect("/join");
 
   const { group, player } = session;
+
+  // Logging lives on the play day now: one place, remembered across refreshes,
+  // and usable by whoever is resting. Until the table exists, the old
+  // two-person form below still works.
+  if (await sessionsReady()) {
+    const today = await getPlayDayByDate(group.id, jakartaDate());
+    redirect(today ? `/play/${today.id}` : "/play");
+  }
+
   const format = formatFor(group);
 
   const opponents = (await getPlayers(group.id))
