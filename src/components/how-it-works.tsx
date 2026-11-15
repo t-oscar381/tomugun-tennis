@@ -17,7 +17,7 @@ const STEPS = [
   {
     n: 1,
     title: "Join the group",
-    body: "Type the group code someone shared with you, then pick your name from the list. No password, no email.",
+    body: "Type the group code someone shared with you, then pick your slot and put your name on it. No password, no email.",
   },
   {
     n: 2,
@@ -32,12 +32,12 @@ const STEPS = [
   {
     n: 4,
     title: "They confirm it",
-    body: "Your opponent gets it on their home screen and taps to agree. Nothing counts until they do — that's what keeps the ladder honest.",
+    body: "Your opponent gets it on their home screen and taps to agree. Nothing counts until they do — that's what keeps the record honest.",
   },
   {
     n: 5,
-    title: "Your rank moves",
-    body: "Win and you climb. Lose and you slide. Beat someone above you and you jump further. No maths to do — it just moves.",
+    title: "It goes in the record",
+    body: "Wins, losses and your head-to-head against every player, kept for good.",
   },
 ];
 
@@ -47,14 +47,14 @@ export function FlowDiagram() {
     { x: 8, l1: "Join the", l2: "group" },
     { x: 198, l1: "Play, then", l2: "log the score" },
     { x: 388, l1: "Opponent", l2: "confirms it" },
-    { x: 578, l1: "Your rank", l2: "moves" },
+    { x: 578, l1: "It goes in", l2: "the record" },
   ];
 
   return (
     <svg
       viewBox="0 0 760 132"
       role="img"
-      aria-label="Flow: join the group, play and log the score, your opponent confirms it, your rank moves."
+      aria-label="Flow: join the group, play and log the score, your opponent confirms it, it goes in the record."
       className="hidden h-auto w-full sm:block"
     >
       <defs>
@@ -199,11 +199,11 @@ export function Hero({ groupName }: { groupName?: string }) {
         <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
           All your tennis,
           <br />
-          <span className="text-[var(--color-clay)]">one ladder.</span>
+          <span className="text-[var(--color-clay)]">one record book.</span>
         </h1>
         <p className="mt-2 max-w-sm text-sm text-[var(--color-ink)]/85">
           {groupName ? `${groupName} — ` : ""}play your normal friendly matches, log the score in
-          ten seconds, and watch your rank actually move.
+          ten seconds, and keep a record everyone can see.
         </p>
       </div>
     </div>

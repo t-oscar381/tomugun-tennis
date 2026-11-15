@@ -14,7 +14,7 @@ import { buildBracket, champion, setWinner, type Entrant } from "@/lib/engine/br
 import { parseScoreline } from "@/lib/engine/scoreline";
 import { GROUP_SLUG, formatFor } from "@/lib/league";
 import { confirmMatch, runRatingPeriods, winChance } from "@/lib/rating";
-import { clearSession, codeMatches, setSessionPlayer } from "@/lib/session";
+import { clearSession, codeMatches, getSession, setSessionPlayer } from "@/lib/session";
 
 type State = { error?: string };
 
@@ -67,19 +67,20 @@ export async function signOutAction(): Promise<void> {
  * the opponent confirms — an unverified ledger is worse than no ladder at all.
  */
 export async function logMatchAction(_prev: State, form: FormData): Promise<State> {
-  const meId = String(form.get("meId") ?? "");
   const oppId = String(form.get("opponentId") ?? "");
   const raw = String(form.get("score") ?? "");
 
-  if (!meId || !oppId) return { error: "Pick an opponent." };
-  if (meId === oppId) return { error: "You can't play yourself." };
+  // Who is logging comes from the session cookie. It used to be a hidden form
+  // field, which let anyone log a result as anyone else.
+  const session = await getSession();
+  if (!session) return { error: "Sign in first." };
+  const { group, player: me } = session;
 
-  const group = await getGroupBySlug(GROUP_SLUG);
-  if (!group) return { error: "League not found." };
+  if (!oppId) return { error: "Pick an opponent." };
+  if (me.id === oppId) return { error: "You can't play yourself." };
 
-  const [me, opponent] = await Promise.all([getPlayer(meId), getPlayer(oppId)]);
-  if (!me || !opponent) return { error: "Unknown player." };
-  if (me.group_id !== group.id || opponent.group_id !== group.id) {
+  const opponent = await getPlayer(oppId);
+  if (!opponent || opponent.group_id !== group.id) {
     return { error: "That player isn't in this league." };
   }
 
@@ -116,24 +117,63 @@ export async function logMatchAction(_prev: State, form: FormData): Promise<Stat
   redirect("/?logged=1");
 }
 
-/** The opponent agrees the result is right. This is what moves RP. */
-export async function confirmAction(form: FormData): Promise<void> {
-  const matchId = String(form.get("matchId") ?? "");
-  if (!matchId) return;
+/** A match the signed-in player took part in, or null. */
+async function myMatch(matchId: string) {
+  const session = await getSession();
+  if (!session || !matchId) return null;
+  const { data } = await db()
+    .from("tennis_matches")
+    .select("id, player_a, player_b, logged_by, status, group_id")
+    .eq("id", matchId)
+    .maybeSingle();
+  if (!data || data.group_id !== session.group.id) return null;
+  const me = session.player.id;
+  if (data.player_a !== me && data.player_b !== me) return null;
+  return { match: data, me };
+}
 
-  await confirmMatch(matchId);
+/**
+ * The opponent agrees the result is right. Only the player who did NOT log it
+ * may confirm — otherwise "your opponent has to agree" is a suggestion, not a
+ * rule. (The 48-hour auto-confirm calls confirmMatch directly.)
+ */
+export async function confirmAction(form: FormData): Promise<void> {
+  const found = await myMatch(String(form.get("matchId") ?? ""));
+  if (!found || found.match.logged_by === found.me) return;
+
+  await confirmMatch(found.match.id as string);
   revalidatePath("/");
 }
 
 export async function disputeAction(form: FormData): Promise<void> {
-  const matchId = String(form.get("matchId") ?? "");
-  if (!matchId) return;
+  const found = await myMatch(String(form.get("matchId") ?? ""));
+  if (!found || found.match.status !== "pending") return;
 
   // Disputes are deliberately a dead end rather than an edit flow: the two
-  // players sort it out and re-log. Building an arbitration UI for a group of
-  // friends would be solving a problem they don't have.
-  await db().from("tennis_matches").update({ status: "disputed" }).eq("id", matchId);
+  // players sort it out and re-log.
+  await db().from("tennis_matches").update({ status: "disputed" }).eq("id", found.match.id);
   revalidatePath("/");
+}
+
+/** Change your own display name. Placeholders like "A" are meant to be replaced. */
+export async function renameAction(_prev: State, form: FormData): Promise<State> {
+  const session = await getSession();
+  if (!session) return { error: "Sign in first." };
+
+  const name = String(form.get("name") ?? "").trim();
+  if (!name) return { error: "Type a name." };
+  if (name.length > 24) return { error: "That name is too long." };
+
+  const { error } = await db()
+    .from("tennis_players")
+    .update({ name })
+    .eq("id", session.player.id);
+
+  if (error?.code === "23505") return { error: "Someone already has that name." };
+  if (error) return { error: error.message };
+
+  revalidatePath("/");
+  redirect(`/player/${session.player.id}?renamed=1`);
 }
 
 /** Fold closed weeks into Glicko-2. Safe to call repeatedly; it's a no-op once caught up. */
@@ -167,8 +207,9 @@ export async function createTournamentAction(_prev: State, form: FormData): Prom
   const seeded = form.get("seeded") !== "random";
   const raw = String(form.get("entrants") ?? "[]");
 
-  const group = await getGroupBySlug(GROUP_SLUG);
-  if (!group) return { error: "League not found." };
+  const session = await getSession();
+  if (!session) return { error: "Sign in first." };
+  const group = session.group;
 
   let entrants: Entrant[];
   try {
@@ -211,7 +252,7 @@ export async function createTournamentAction(_prev: State, form: FormData): Prom
       kind,
       seeded,
       bracket,
-      created_by: form.get("meId") ? String(form.get("meId")) : null,
+      created_by: session.player.id,
     })
     .select("id")
     .single();
@@ -226,6 +267,7 @@ export async function createTournamentAction(_prev: State, form: FormData): Prom
 
 /** Record who won a bracket match, and re-derive everything downstream. */
 export async function advanceBracketAction(form: FormData): Promise<void> {
+  if (!(await getSession())) return;
   const id = String(form.get("tournamentId") ?? "");
   const round = Number(form.get("round"));
   const index = Number(form.get("index"));
@@ -251,6 +293,7 @@ export async function advanceBracketAction(form: FormData): Promise<void> {
 }
 
 export async function deleteTournamentAction(form: FormData): Promise<void> {
+  if (!(await getSession())) return;
   const id = String(form.get("tournamentId") ?? "");
   if (!id) return;
   await db().from("tennis_tournaments").delete().eq("id", id);

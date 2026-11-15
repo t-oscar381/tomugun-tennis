@@ -156,10 +156,30 @@ grant all privileges on table
 grant all privileges on all sequences in schema public to service_role;
 
 -- ---------------------------------------------------------------------------
--- Seed: one group to play with. Change the join code before sharing it.
+-- Seed: one group to play with.
+--
+-- The join code is GENERATED here, never written down. This repo is public,
+-- and an earlier version seeded a literal code that then stayed live in
+-- production — so anyone who read this file could join the league. Read the
+-- generated one once and share it out of band:
+--
+--   select slug, join_code from public.tennis_groups;
+--
+-- To change it later:
+--   update public.tennis_groups
+--      set join_code = upper(substr(md5(gen_random_uuid()::text), 1, 6))
+--    where slug = 'jakarta';
 -- ---------------------------------------------------------------------------
 insert into public.tennis_groups (slug, name, join_code)
-values ('jakarta', 'Jakarta Social Tennis', 'DEUCE')
+values ('jakarta', 'Jakarta Social Tennis', upper(substr(md5(gen_random_uuid()::text), 1, 6)))
+on conflict (slug) do nothing;
+
+-- The sample season shown read-only at /example. A separate group, so demo
+-- players and matches can never appear in the real records. Its code is
+-- random and unused: the deployment's GROUP_SLUG points at the real league,
+-- so nobody can join this one.
+insert into public.tennis_groups (slug, name, join_code)
+values ('example', 'Example league', upper(substr(md5(gen_random_uuid()::text), 1, 12)))
 on conflict (slug) do nothing;
 
 -- ---------------------------------------------------------------------------

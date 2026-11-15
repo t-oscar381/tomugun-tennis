@@ -1,31 +1,16 @@
 import Link from "next/link";
-import {
-  getDisputedFor,
-  getGroupBySlug,
-  getMatches,
-  getPendingFor,
-  getPlayers,
-  type PlayerRow,
-} from "@/lib/db";
-import { RP, rankFromRp } from "@/lib/engine/ranks";
+import { getDisputedFor, getGroupBySlug, getMatches, getPendingFor, getPlayers } from "@/lib/db";
 import { GROUP_SLUG } from "@/lib/league";
 import { CONFIRM_WINDOW_HOURS, autoConfirmStale, hoursLeftToConfirm, runRatingPeriods } from "@/lib/rating";
 import { getSession } from "@/lib/session";
 import { InviteCard } from "@/components/invite-card";
-import { RankBadge, RpDelta } from "@/components/rank";
-import {
-  FlowDiagram,
-  Hero,
-  JoinCta,
-  PhotoStrip,
-  RankExplainer,
-  Steps,
-} from "@/components/how-it-works";
+import { RenameForm } from "@/components/rename-form";
+import { ResultsList, Standings, flipSetToken } from "@/components/standings";
+import { FlowDiagram, Hero, JoinCta, PhotoStrip, Steps } from "@/components/how-it-works";
 import { confirmAction, disputeAction } from "./actions";
 
 // Every view here changes the moment a match is confirmed, so nothing is
-// prerendered. (No runtime = "edge" — it breaks page loading under OpenNext,
-// the same way it did in tomugun-celebration.)
+// prerendered. (No runtime = "edge" — it breaks page loading under OpenNext.)
 export const dynamic = "force-dynamic";
 
 export default async function HomePage({
@@ -34,26 +19,15 @@ export default async function HomePage({
   searchParams: Promise<{ logged?: string }>;
 }) {
   const session = await getSession();
-
-  // Not signed in? Explain the thing before asking for anything. This used to
-  // redirect straight to /join, which showed a stranger a code box and no clue
-  // what the app was.
   if (!session) return <Welcome />;
 
   const { group, player } = session;
   const { logged } = await searchParams;
 
-  // Fold any closed weeks into MMR before rendering, so the ladder is never
-  // stale just because no cron has run. It's a no-op once caught up.
-  //
-  // This calls runRatingPeriods directly rather than the recalcAction server
-  // action, because that action ends with revalidatePath("/") and Next throws
-  // "Route / used revalidatePath during render" if a cache invalidation is
-  // requested from a component. There is nothing to invalidate here anyway:
-  // the page is force-dynamic and reads the updated rows further down in this
-  // same render.
-  // Silence counts as agreement once the dispute window lapses, otherwise one
-  // person who never opens the app freezes that result forever.
+  // Silence counts as agreement once the dispute window lapses. Ratings are
+  // still folded in underneath even though ranks are hidden, so turning them
+  // on later needs no backfill. Called directly, not via a server action:
+  // revalidatePath during render throws.
   await autoConfirmStale(group.id);
   await runRatingPeriods(group.id);
 
@@ -65,10 +39,9 @@ export default async function HomePage({
   ]);
 
   const byId = new Map(players.map((p) => [p.id, p]));
-  const ranked = players.filter((p) => p.matches >= RP.placementMatches);
-  const placing = players.filter((p) => p.matches < RP.placementMatches);
-  const myPlacementsLeft = RP.placementMatches - player.matches;
-  const myPosition = ranked.findIndex((p) => p.id === player.id) + 1;
+  // The roster starts as single letters; nudge whoever claimed one to put
+  // their real name on it.
+  const placeholder = player.name.length === 1;
 
   return (
     <div className="space-y-6">
@@ -79,59 +52,45 @@ export default async function HomePage({
         </p>
       )}
 
-      {/* Your own standing, first thing, so the page answers "how am I doing?"
-          before it answers anything else. */}
-      <MyStanding
-        player={player}
-        position={myPosition}
-        placementsLeft={myPlacementsLeft}
-        groupName={group.name}
-      />
+      {placeholder && (
+        <section className="space-y-2 rounded-2xl border-2 border-[var(--color-clay)]/50 bg-[var(--color-surface)] p-5">
+          <h2 className="font-bold">You&apos;re signed in as &ldquo;{player.name}&rdquo;</h2>
+          <p className="text-sm text-[var(--color-muted)]">
+            That&apos;s a placeholder. Put your name on it so the others know who they played.
+          </p>
+          <RenameForm current={player.name} />
+        </section>
+      )}
 
-      {/* Two columns from lg up: the ladder earns the width, everything
-          time-sensitive sits beside it instead of below the fold. */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_20rem] lg:items-start">
-        <div className="space-y-6">
-          <section className="space-y-3">
-            <div className="flex items-baseline justify-between gap-3">
-              <h2 className="text-lg font-bold tracking-tight">Ladder</h2>
-              <span className="text-sm text-[var(--color-muted)]">{players.length} players</span>
-            </div>
-
-            {ranked.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-[var(--color-line)] p-4 text-sm text-[var(--color-muted)]">
-                Nobody has a rank yet. Everyone plays {RP.placementMatches} matches first, then the
-                ladder appears.
-              </p>
-            ) : (
-              <ol className="divide-y divide-[var(--color-line)] overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)]">
-                {ranked.map((p, i) => (
-                  <LadderRow key={p.id} rank={i + 1} player={p} isMe={p.id === player.id} />
-                ))}
-              </ol>
-            )}
-
-            {placing.length > 0 && (
-              <div className="rounded-xl border border-dashed border-[var(--color-line)] p-4">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-                  Still in placements
-                </h3>
-                <ul className="mt-2 space-y-1.5">
-                  {placing.map((p) => (
-                    <li key={p.id} className="flex items-center justify-between text-sm">
-                      <Link href={`/player/${p.id}`} className="hover:underline">
-                        {p.emoji} {p.name}
-                      </Link>
-                      <span className="nums text-[var(--color-muted)]">
-                        {p.matches}/{RP.placementMatches} matches
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </section>
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
+        <div className="flex items-center gap-3">
+          <span
+            aria-hidden
+            className="flex size-12 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-2xl"
+          >
+            {player.emoji}
+          </span>
+          <div>
+            <p className="text-xs text-[var(--color-muted)]">{group.name}</p>
+            <h1 className="text-xl font-bold tracking-tight">{player.name}</h1>
+          </div>
         </div>
+        <p className="nums text-right">
+          <span className="text-2xl font-bold">
+            {player.wins}–{player.losses}
+          </span>
+          <span className="block text-xs text-[var(--color-muted)]">won – lost</span>
+        </p>
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_20rem] lg:items-start">
+        <section className="space-y-3">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-lg font-bold tracking-tight">Records</h2>
+            <span className="text-sm text-[var(--color-muted)]">{players.length} players</span>
+          </div>
+          <Standings players={players} meId={player.id} />
+        </section>
 
         <aside className="space-y-6">
           {pending.length > 0 && (
@@ -145,12 +104,12 @@ export default async function HomePage({
               </div>
               {pending.map((m) => {
                 const opponentId = m.player_a === player.id ? m.player_b : m.player_a;
-                const opponent = byId.get(opponentId);
                 const iWon = m.winner_id === player.id;
                 const asWritten =
                   m.player_a === player.id
                     ? m.scoreline
                     : m.scoreline.split(" ").map(flipSetToken).join(" ");
+                const left = hoursLeftToConfirm(m.created_at);
 
                 return (
                   <div
@@ -158,7 +117,8 @@ export default async function HomePage({
                     className="rounded-xl border-2 border-[var(--color-clay)]/50 bg-[var(--color-surface)] p-4"
                   >
                     <p className="text-sm">
-                      <span className="font-semibold">{opponent?.name ?? "Someone"}</span> says{" "}
+                      <span className="font-semibold">{byId.get(opponentId)?.name ?? "Someone"}</span>{" "}
+                      says{" "}
                       <span
                         className={`font-semibold ${
                           iWon ? "text-[var(--color-win)]" : "text-[var(--color-loss)]"
@@ -169,12 +129,9 @@ export default async function HomePage({
                     </p>
                     <p className="nums mt-1 text-lg font-bold">{asWritten}</p>
                     <p className="mt-1 text-xs text-[var(--color-muted)]">
-                      {(() => {
-                        const left = hoursLeftToConfirm(m.created_at);
-                        return left > 0
-                          ? `Counts automatically in ${left}h if you don't say otherwise.`
-                          : "About to count automatically.";
-                      })()}
+                      {left > 0
+                        ? `Counts automatically in ${left}h if you don't say otherwise.`
+                        : "About to count automatically."}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <form action={confirmAction}>
@@ -216,12 +173,6 @@ export default async function HomePage({
                   );
                 })}
               </ul>
-              <Link
-                href="/log"
-                className="inline-block pt-1 text-sm font-semibold text-[var(--color-clay)] underline"
-              >
-                Log it again
-              </Link>
             </section>
           )}
 
@@ -233,21 +184,6 @@ export default async function HomePage({
             <span aria-hidden>→</span>
           </Link>
 
-          <Link
-            href="/formats"
-            className="flex items-center justify-between rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-5 py-4 font-semibold"
-          >
-            <span>
-              Playing as a group?
-              <span className="block text-xs font-normal text-[var(--color-muted)]">
-                Run a knockout, or draw a rotation night
-              </span>
-            </span>
-            <span aria-hidden className="text-[var(--color-clay)]">
-              →
-            </span>
-          </Link>
-
           <InviteCard
             inviteUrl={`${process.env.SITE_URL ?? "https://play-tennis.tomugun.com"}/join?c=${encodeURIComponent(group.join_code)}`}
             code={group.join_code}
@@ -257,113 +193,21 @@ export default async function HomePage({
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">
               Recent results
             </h2>
-            {recent.length === 0 ? (
-              <p className="text-sm text-[var(--color-muted)]">No confirmed matches yet.</p>
-            ) : (
-              <ul className="space-y-2">
-                {recent.map((m) => {
-                  const a = byId.get(m.player_a);
-                  const b = byId.get(m.player_b);
-                  const aWon = m.winner_id === m.player_a;
-                  const winner = aWon ? a : b;
-                  const loser = aWon ? b : a;
-                  const winnerRp = aWon ? m.rp_delta_a : m.rp_delta_b;
-                  const upset = aWon ? m.win_prob_a < 0.4 : m.win_prob_a > 0.6;
-                  const score = aWon
-                    ? m.scoreline
-                    : m.scoreline.split(" ").map(flipSetToken).join(" ");
-
-                  return (
-                    <li
-                      key={m.id}
-                      className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="min-w-0">
-                          <span className="font-semibold">{winner?.name}</span>
-                          <span className="text-[var(--color-muted)]"> beat </span>
-                          {loser?.name}
-                        </p>
-                        <RpDelta delta={winnerRp} />
-                      </div>
-                      <p className="nums mt-0.5 text-xs text-[var(--color-muted)]">
-                        {score}
-                        {upset && (
-                          <span className="ml-2 rounded bg-[var(--color-master)]/12 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-master)]">
-                            Upset
-                          </span>
-                        )}
-                      </p>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+            <ResultsList matches={recent} players={players} />
           </section>
         </aside>
       </div>
+
+      <p className="text-center text-sm text-[var(--color-muted)]">
+        <Link href="/how" className="text-[var(--color-clay)] underline">
+          How it works
+        </Link>
+        <span aria-hidden className="mx-2">·</span>
+        <Link href="/example" className="text-[var(--color-clay)] underline">
+          See an example season
+        </Link>
+      </p>
     </div>
-  );
-}
-
-/** The "you" card: rank, record, and what's at stake, above everything else. */
-function MyStanding({
-  player,
-  position,
-  placementsLeft,
-  groupName,
-}: {
-  player: PlayerRow;
-  position: number;
-  placementsLeft: number;
-  groupName: string;
-}) {
-  const winRate = player.matches ? Math.round((player.wins / player.matches) * 100) : 0;
-
-  return (
-    <section className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
-      <p className="text-xs text-[var(--color-muted)]">{groupName}</p>
-      <div className="mt-1 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <span
-            aria-hidden
-            className="flex size-12 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-2xl"
-          >
-            {player.emoji}
-          </span>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">{player.name}</h1>
-            <p className="nums text-sm text-[var(--color-muted)]">
-              {player.wins}-{player.losses}
-              {player.matches > 0 && ` · ${winRate}% wins`}
-              {player.streak >= 3 && (
-                <span className="ml-2 font-semibold text-[var(--color-win)]">
-                  🔥 {player.streak} in a row
-                </span>
-              )}
-            </p>
-          </div>
-        </div>
-
-        <div className="text-right">
-          {placementsLeft > 0 ? (
-            <>
-              <p className="nums text-2xl font-bold">{placementsLeft}</p>
-              <p className="text-xs text-[var(--color-muted)]">
-                more {placementsLeft === 1 ? "match" : "matches"} to get ranked
-              </p>
-            </>
-          ) : (
-            <>
-              <RankBadge rp={player.rp} size="lg" />
-              <p className="nums mt-1 text-xs text-[var(--color-muted)]">
-                {Math.round(player.rp)} RP{position > 0 && ` · #${position} on the ladder`}
-              </p>
-            </>
-          )}
-        </div>
-      </div>
-    </section>
   );
 }
 
@@ -389,9 +233,14 @@ async function Welcome() {
         <Steps />
       </section>
 
-      <section className="space-y-4">
-        <h2 className="text-lg font-bold">The ranks</h2>
-        <RankExplainer />
+      <section className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
+        <h2 className="font-bold">Want to see it with a season in it?</h2>
+        <p className="mt-1 text-sm text-[var(--color-muted)]">
+          There&apos;s a sample league with made-up players and a hundred matches.
+        </p>
+        <Link href="/example" className="mt-2 inline-block font-semibold text-[var(--color-clay)] underline">
+          Look at the example
+        </Link>
       </section>
 
       <PhotoStrip />
@@ -405,10 +254,10 @@ async function Welcome() {
           </p>
         </div>
         <div className="space-y-2 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
-          <h3 className="font-bold">Beating the same person pays less</h3>
+          <h3 className="font-bold">It keeps your head-to-heads</h3>
           <p className="text-sm text-[var(--color-muted)]">
-            Each rematch with the same opponent is worth less than the last. Go find a tougher
-            match.
+            Every player page shows your record against each person in the group, so the
+            argument about who usually wins has an answer.
           </p>
         </div>
       </section>
@@ -418,57 +267,4 @@ async function Welcome() {
       </div>
     </div>
   );
-}
-
-function LadderRow({ rank, player, isMe }: { rank: number; player: PlayerRow; isMe: boolean }) {
-  const r = rankFromRp(player.rp);
-  const winRate = player.matches ? Math.round((player.wins / player.matches) * 100) : 0;
-
-  return (
-    <li className={isMe ? "bg-[var(--color-clay-soft)]" : undefined}>
-      <Link href={`/player/${player.id}`} className="flex items-center gap-3 px-3 py-3">
-        <span className="nums w-6 shrink-0 text-center text-sm font-bold text-[var(--color-muted)]">
-          {rank}
-        </span>
-        <span
-          aria-hidden
-          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-lg"
-        >
-          {player.emoji}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-semibold">
-            {player.name}
-            {isMe && (
-              <span className="ml-1.5 rounded bg-[var(--color-clay)] px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">
-                you
-              </span>
-            )}
-          </span>
-          <span className="nums block text-xs text-[var(--color-muted)]">
-            {player.wins}-{player.losses} · {winRate}%
-            {player.streak >= 3 && (
-              <span className="ml-1.5 text-[var(--color-win)]">🔥 {player.streak}</span>
-            )}
-          </span>
-        </span>
-        <span className="shrink-0 text-right">
-          <RankBadge rp={player.rp} size="sm" />
-          <span className="nums mt-1 block text-xs text-[var(--color-muted)]">
-            {Math.round(player.rp)} RP
-          </span>
-        </span>
-      </Link>
-      <span className="sr-only">{r.label}</span>
-    </li>
-  );
-}
-
-/** "6-4" -> "4-6", "7-6(4)" -> "6-7(4)", "[10-8]" -> "[8-10]". */
-function flipSetToken(token: string): string {
-  const mtb = /^\[(\d+)-(\d+)\]$/.exec(token);
-  if (mtb) return `[${mtb[2]}-${mtb[1]}]`;
-  const m = /^(\d+)-(\d+)(\(\d+\))?$/.exec(token);
-  if (!m) return token;
-  return `${m[2]}-${m[1]}${m[3] ?? ""}`;
 }

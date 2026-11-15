@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     template: "%s · Tomugun Tennis",
   },
   description:
-    "Play your normal friendly matches, log the score, and get a rank that actually moves.",
+    "Play your normal friendly matches, log the score, and keep a record everyone can see.",
   applicationName: "Tomugun Tennis",
   appleWebApp: { capable: true, title: "Tennis", statusBarStyle: "default" },
   // The link gets pasted into WhatsApp — that is the entire growth loop for a
@@ -43,14 +43,14 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "Tomugun Tennis",
     title: "Tomugun Tennis",
-    description: "Log a friendly match, climb a ranked ladder.",
+    description: "Log a friendly match, keep the record.",
     url: SITE,
     images: [{ url: photo(HERO.id, 1200), width: 1200, height: 800, alt: HERO.alt }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Tomugun Tennis",
-    description: "Log a friendly match, climb a ranked ladder.",
+    description: "Log a friendly match, keep the record.",
     images: [photo(HERO.id, 1200)],
   },
 };
@@ -90,7 +90,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                     href="/"
                     className="hidden px-1 text-[var(--color-muted)] hover:text-[var(--color-ink)] sm:block"
                   >
-                    Ladder
+                    Records
                   </Link>
                   <Link
                     href="/tournaments"
@@ -114,8 +114,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                     name={session.player.name}
                     emoji={session.player.emoji}
                     playerId={session.player.id}
-                    rp={session.player.rp}
-                    matches={session.player.matches}
+                    wins={session.player.wins}
+                    losses={session.player.losses}
                     groupName={session.group.name}
                   />
                 </>

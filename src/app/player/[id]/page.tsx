@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getMatches, getPlayer, getPlayers } from "@/lib/db";
-import { RP, rankFromRp } from "@/lib/engine/ranks";
 import { getSession } from "@/lib/session";
-import { RankBadge, RankProgress, RpDelta, StakeNote } from "@/components/rank";
-import { RpChart } from "@/components/rp-chart";
+import { RenameForm } from "@/components/rename-form";
+import { flipSetToken } from "@/components/standings";
 import { signOutAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -15,8 +14,21 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return player ? { title: player.name } : { title: "Player" };
 }
 
-export default async function PlayerPage({ params }: { params: Promise<{ id: string }> }) {
+/**
+ * A player's record: totals, head-to-heads, and every match.
+ *
+ * Deliberately no rank, rank points or chart — the group asked for records
+ * only. The head-to-head table is the part people actually look at.
+ */
+export default async function PlayerPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ renamed?: string }>;
+}) {
   const { id } = await params;
+  const { renamed } = await searchParams;
 
   const player = await getPlayer(id);
   if (!player) notFound();
@@ -24,19 +36,14 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   const session = await getSession();
   const isMe = session?.player.id === player.id;
 
-  // rating_history is deliberately not read here — see the note in RpChart on
-  // why its rp_after column cannot reconstruct a curve. One fewer round trip.
   const [roster, matches] = await Promise.all([
     getPlayers(player.group_id),
-    getMatches(player.group_id, { playerId: player.id, status: "confirmed", limit: 60 }),
+    getMatches(player.group_id, { playerId: player.id, status: "confirmed", limit: 200 }),
   ]);
 
   const byId = new Map(roster.map((p) => [p.id, p]));
-  const inPlacements = player.matches < RP.placementMatches;
   const winRate = player.matches ? Math.round((player.wins / player.matches) * 100) : 0;
 
-  // Rivalries: the head-to-head record is what actually drives rematches, so
-  // it gets more room than the aggregate stats do.
   const h2h = new Map<string, { played: number; won: number }>();
   for (const m of matches) {
     const oppId = m.player_a === player.id ? m.player_b : m.player_a;
@@ -50,77 +57,42 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
     .filter((r) => r.opponent)
     .sort((a, b) => b.played - a.played);
 
-  // Reconstruct the RP curve by walking the ledger backwards from today's
-  // value, then reversing. Placement matches are excluded: they move no RP,
-  // and the post-placement seed is applied directly rather than as a delta,
-  // so including them would draw a flat run that never happened.
-  const ranked = matches
-    .filter((m) => !m.placement)
-    .slice()
-    .sort((a, b) => new Date(a.played_at).getTime() - new Date(b.played_at).getTime());
-
-  const deltas = ranked.map((m) => (m.player_a === player.id ? m.rp_delta_a : m.rp_delta_b));
-  const start = player.rp - deltas.reduce((a, d) => a + d, 0);
-  const rpSeries = deltas.reduce<number[]>((acc, d) => [...acc, acc[acc.length - 1]! + d], [start]);
-
-  const peak = rankFromRp(player.peak_rp);
-
   return (
-    <div className="space-y-8">
-      <section className="space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-              <span aria-hidden>{player.emoji}</span>
-              <span className="truncate">{player.name}</span>
-            </h1>
-            <p className="nums mt-1 text-sm text-[var(--color-muted)]">
-              {player.wins}-{player.losses} · {winRate}% wins
-              {player.streak >= 3 && (
-                <span className="ml-2 text-[var(--color-win)]">🔥 {player.streak} in a row</span>
-              )}
-              {player.streak <= -3 && (
-                <span className="ml-2 text-[var(--color-loss)]">{Math.abs(player.streak)} straight losses</span>
-              )}
-            </p>
-          </div>
-          {!inPlacements && <RankBadge rp={player.rp} size="lg" />}
-        </div>
+    <div className="mx-auto max-w-2xl space-y-8">
+      {renamed && (
+        <p className="rounded-xl border border-[var(--color-win)]/40 bg-[var(--color-win)]/10 px-4 py-3 text-sm">
+          Name saved.
+        </p>
+      )}
 
-        {inPlacements ? (
-          <div className="rounded-xl border border-dashed border-[var(--color-line)] p-4">
-            <p className="text-sm">
-              {player.matches} of {RP.placementMatches} placement matches played.
-            </p>
-            <p className="mt-1 text-xs text-[var(--color-muted)]">
-              Rank appears once placements are done — the starting RP is set from how those
-              matches actually went.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
-            <RankProgress rp={player.rp} />
-            <div className="flex items-center justify-between">
-              <StakeNote rp={player.rp} />
-              {player.peak_rp > player.rp && (
-                <p className="text-xs text-[var(--color-muted)]">Peak: {peak.label}</p>
-              )}
-            </div>
-          </div>
-        )}
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
+        <h1 className="flex min-w-0 items-center gap-3 text-2xl font-bold tracking-tight">
+          <span aria-hidden>{player.emoji}</span>
+          <span className="truncate">{player.name}</span>
+        </h1>
+        <dl className="nums flex gap-6 text-center">
+          <Stat label="Won" value={player.wins} />
+          <Stat label="Lost" value={player.losses} />
+          <Stat label="Win %" value={player.matches ? `${winRate}%` : "—"} />
+        </dl>
       </section>
 
-      {!inPlacements && <RpChart series={rpSeries} currentRp={player.rp} />}
+      {isMe && (
+        <section className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
+          <RenameForm current={player.name} />
+        </section>
+      )}
 
-      {rivalries.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-            Rivalries
-          </h2>
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+          Head to head
+        </h2>
+        {rivalries.length === 0 ? (
+          <p className="text-sm text-[var(--color-muted)]">No matches yet.</p>
+        ) : (
           <ul className="divide-y divide-[var(--color-line)] overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)]">
             {rivalries.map((r) => {
               const lost = r.played - r.won;
-              const leading = r.won > lost;
               return (
                 <li key={r.opponent!.id} className="flex items-center justify-between px-3 py-2.5">
                   <Link href={`/player/${r.opponent!.id}`} className="truncate text-sm hover:underline">
@@ -128,17 +100,21 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                   </Link>
                   <span
                     className={`nums text-sm font-semibold ${
-                      leading ? "text-[var(--color-win)]" : lost > r.won ? "text-[var(--color-loss)]" : ""
+                      r.won > lost
+                        ? "text-[var(--color-win)]"
+                        : lost > r.won
+                          ? "text-[var(--color-loss)]"
+                          : ""
                     }`}
                   >
-                    {r.won}-{lost}
+                    {r.won}–{lost}
                   </span>
                 </li>
               );
             })}
           </ul>
-        </section>
-      )}
+        )}
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">
@@ -152,45 +128,30 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
               const isA = m.player_a === player.id;
               const oppId = isA ? m.player_b : m.player_a;
               const won = m.winner_id === player.id;
-              const delta = isA ? m.rp_delta_a : m.rp_delta_b;
-              // Stored from player_a's side; flip the string for player B.
-              const score = isA
-                ? m.scoreline
-                : m.scoreline
-                    .split(" ")
-                    .map(flipSetToken)
-                    .join(" ");
-
+              const score = isA ? m.scoreline : m.scoreline.split(" ").map(flipSetToken).join(" ");
               return (
                 <li
                   key={m.id}
                   className="flex items-center justify-between rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm"
                 >
-                  <div className="min-w-0">
-                    <p className="truncate">
-                      <span className={won ? "text-[var(--color-win)]" : "text-[var(--color-loss)]"}>
-                        {won ? "W" : "L"}
-                      </span>{" "}
-                      <span className="text-[var(--color-muted)]">vs</span>{" "}
-                      {byId.get(oppId)?.name ?? "—"}
-                    </p>
-                    <p className="nums text-xs text-[var(--color-muted)]">{score}</p>
-                  </div>
-                  <div className="shrink-0 pl-3">
-                    {m.placement ? (
-                      <span className="text-xs text-[var(--color-muted)]">placement</span>
-                    ) : (
-                      <RpDelta delta={delta} />
-                    )}
-                  </div>
+                  <p className="min-w-0 truncate">
+                    <span
+                      className={`font-bold ${won ? "text-[var(--color-win)]" : "text-[var(--color-loss)]"}`}
+                    >
+                      {won ? "Won" : "Lost"}
+                    </span>{" "}
+                    <span className="text-[var(--color-muted)]">v</span> {byId.get(oppId)?.name ?? "—"}
+                  </p>
+                  <p className="nums shrink-0 pl-3 text-xs text-[var(--color-muted)]">
+                    {score} ·{" "}
+                    {new Date(m.played_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                  </p>
                 </li>
               );
             })}
           </ul>
         )}
       </section>
-
-
 
       {isMe && (
         <form action={signOutAction}>
@@ -201,11 +162,11 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   );
 }
 
-/** "6-4" -> "4-6", "7-6(4)" -> "6-7(4)", "[10-8]" -> "[8-10]". */
-function flipSetToken(token: string): string {
-  const mtb = /^\[(\d+)-(\d+)\]$/.exec(token);
-  if (mtb) return `[${mtb[2]}-${mtb[1]}]`;
-  const m = /^(\d+)-(\d+)(\(\d+\))?$/.exec(token);
-  if (!m) return token;
-  return `${m[2]}-${m[1]}${m[3] ?? ""}`;
+function Stat({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div>
+      <dd className="text-2xl font-bold">{value}</dd>
+      <dt className="text-xs text-[var(--color-muted)]">{label}</dt>
+    </div>
+  );
 }

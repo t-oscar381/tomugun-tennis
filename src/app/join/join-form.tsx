@@ -28,7 +28,7 @@ export function JoinForm({
  * Step one. A plain GET form, so it works with no JavaScript and leaves the
  * code in the URL — which is what makes an invite link possible.
  *
- * No placeholder here on purpose: it used to read "DEUCE", which was the
+ * No placeholder here on purpose: it used to show the real code, which was the
  * actual live code printed on the page.
  */
 function CodeStep({ wrongCode }: { wrongCode: boolean }) {
@@ -69,7 +69,7 @@ function CodeStep({ wrongCode }: { wrongCode: boolean }) {
 function IdentityStep({ players, code }: { players: Choice[]; code: string }) {
   const [state, action, pending] = useActionState(joinAction, {});
   const [selected, setSelected] = useState("");
-  const [creating, setCreating] = useState(true);
+  const [creating, setCreating] = useState(players.length === 0);
 
   return (
     <form action={action} className="space-y-5">
@@ -105,6 +105,9 @@ function IdentityStep({ players, code }: { players: Choice[]; code: string }) {
       ) : (
         <fieldset className="space-y-2">
           <legend className="text-sm font-semibold">Which one are you?</legend>
+          <p className="text-xs text-[var(--color-muted)]">
+            Take any free letter — you can put your real name on it straight after.
+          </p>
           <div className="grid grid-cols-2 gap-2">
             {players.map((p) => (
               <label

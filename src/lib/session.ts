@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { db, getGroupBySlug, getPlayer, type GroupRow, type PlayerRow } from "./db";
+import { GROUP_SLUG } from "./league";
 
 /**
  * Identity, v1.
@@ -37,6 +38,11 @@ export async function getSession(): Promise<Session | null> {
     .eq("id", player.group_id)
     .maybeSingle();
   if (!data) return null;
+
+  // A cookie for a player in any other group (the example league, say) is not
+  // a session here. Without this, moving a player between groups would carry
+  // whoever holds their cookie into that group with full write access.
+  if ((data as GroupRow).slug !== GROUP_SLUG) return null;
 
   return { group: data as GroupRow, player };
 }

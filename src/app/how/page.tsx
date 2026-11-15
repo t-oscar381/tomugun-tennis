@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getSession } from "@/lib/session";
-import { FlowDiagram, JoinCta, RankExplainer, Steps } from "@/components/how-it-works";
+import { FlowDiagram, JoinCta, Steps } from "@/components/how-it-works";
 
 export const dynamic = "force-dynamic";
 
@@ -15,11 +15,6 @@ export default async function HowPage() {
         <h1 className="text-2xl font-bold tracking-tight">How it works</h1>
         <FlowDiagram />
         <Steps />
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-lg font-bold">The ranks</h2>
-        <RankExplainer />
       </section>
 
       <section className="space-y-4">
@@ -55,19 +50,15 @@ export default async function HowPage() {
 
       <section className="space-y-3">
         <h2 className="text-lg font-bold">Questions people ask</h2>
-        <Faq q="I logged it — why hasn't my rank changed?">
+        <Faq q="I logged it — why isn't it in the record?">
           Your opponent has to confirm it first. Until they do, nothing moves.
         </Faq>
         <Faq q="Someone logged a match wrong.">
           Tap <em>That&apos;s wrong</em> on your home screen. It gets thrown out, and whoever was
           right logs it again.
         </Faq>
-        <Faq q="Why did I barely gain anything for that win?">
-          You were expected to win, and beating the same person repeatedly pays less each time.
-          Beat someone above you for a real jump.
-        </Faq>
-        <Faq q="I lost but didn't drop much.">
-          Losing to someone much better is nearly free. Losing to someone below you is not.
+        <Faq q="How do I change my name?">
+          Open the menu at the top right, choose <em>My record &amp; name</em>, type it and save.
         </Faq>
         <Faq q="Can I play doubles?">
           Not yet — singles only for now.

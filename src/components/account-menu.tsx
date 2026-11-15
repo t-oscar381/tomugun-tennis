@@ -1,8 +1,5 @@
 import Link from "next/link";
-import { rankFromRp } from "@/lib/engine/ranks";
-import { RP } from "@/lib/engine/ranks";
 import { signOutAction } from "@/app/actions";
-import { tierColor } from "./rank";
 
 /**
  * Who am I, and how do I get out.
@@ -21,20 +18,17 @@ export function AccountMenu({
   name,
   emoji,
   playerId,
-  rp,
-  matches,
+  wins,
+  losses,
   groupName,
 }: {
   name: string;
   emoji: string;
   playerId: string;
-  rp: number;
-  matches: number;
+  wins: number;
+  losses: number;
   groupName: string;
 }) {
-  const ranked = matches >= RP.placementMatches;
-  const rank = rankFromRp(rp);
-
   return (
     <details className="group relative">
       <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-[var(--color-line)] bg-[var(--color-surface)] py-1 pl-1 pr-3 marker:hidden">
@@ -59,25 +53,16 @@ export function AccountMenu({
             {name}
           </p>
           <p className="mt-1 text-xs text-[var(--color-muted)]">{groupName}</p>
-          {ranked ? (
-            <p
-              className="nums mt-2 text-sm font-semibold"
-              style={{ color: tierColor(rank.tier) }}
-            >
-              {rank.label} · {Math.round(rp)} RP
-            </p>
-          ) : (
-            <p className="nums mt-2 text-sm text-[var(--color-muted)]">
-              {matches}/{RP.placementMatches} placement matches
-            </p>
-          )}
+          <p className="nums mt-2 text-sm font-semibold">
+            {wins}–{losses} <span className="font-normal text-[var(--color-muted)]">won – lost</span>
+          </p>
         </div>
 
         <Link
           href={`/player/${playerId}`}
           className="block px-4 py-3 text-sm hover:bg-[var(--color-surface-2)]"
         >
-          My profile &amp; stats
+          My record &amp; name
         </Link>
         <Link href="/how" className="block px-4 py-3 text-sm hover:bg-[var(--color-surface-2)]">
           How it works

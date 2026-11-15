@@ -1,10 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getPlayers } from "@/lib/db";
-import { RP } from "@/lib/engine/ranks";
-import { winChance } from "@/lib/rating";
 import { getSession } from "@/lib/session";
-import { StakeNote } from "@/components/rank";
 import { formatFor } from "@/lib/league";
 import { LogForm } from "./log-form";
 
@@ -25,11 +22,7 @@ export default async function LogPage() {
       id: p.id,
       name: p.name,
       emoji: p.emoji,
-      // Shown before you log, so the stakes are visible up front.
-      winChance: Math.round(winChance(player, p) * 100),
     }));
-
-  const inPlacements = player.matches < RP.placementMatches;
 
   return (
     <div className="space-y-5">
@@ -37,7 +30,7 @@ export default async function LogPage() {
         <h1 className="text-xl font-bold tracking-tight">Log a match</h1>
         <p className="text-sm text-[var(--color-muted)]">
           Pick who you played, then tap the games each of you won. No typing, and we work out
-          who won the match. Your opponent confirms before anything moves.
+          who won the match. Your opponent confirms before it goes in the record.
         </p>
         <p className="text-xs text-[var(--color-muted)]">
           <Link href="/how" className="text-[var(--color-clay)] underline">
@@ -46,20 +39,12 @@ export default async function LogPage() {
         </p>
       </div>
 
-      {inPlacements ? (
-        <p className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-xs text-[var(--color-muted)]">
-          Placement match {player.matches + 1} of {RP.placementMatches} — no RP at stake yet.
-        </p>
-      ) : (
-        <StakeNote rp={player.rp} />
-      )}
-
       {opponents.length === 0 ? (
         <p className="text-sm text-[var(--color-muted)]">
           Nobody else has joined this league yet.
         </p>
       ) : (
-        <LogForm meId={player.id} opponents={opponents} format={format} />
+        <LogForm opponents={opponents} format={format} />
       )}
     </div>
   );

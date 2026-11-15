@@ -1,5 +1,12 @@
 # tomugun-tennis
 
+> **Records only, for now.** The group asked for a plain record book first, so
+> rank points and tiers are hidden (`SHOW_RANKS` in `src/lib/league.ts`). They
+> are still computed underneath. Before switching them on for a group this
+> small, make the repeat-opponent decay in `src/lib/rating.ts` per-season: it
+> currently counts lifetime meetings, which drains everyone to zero. The sample
+> season lives in its own group and is shown read-only at `/example`.
+
 `play-tennis.tomugun.com` — log a friendly match, climb a ranked ladder.
 Official ITF tennis scoring for the points, Apex-style tiers for the competition.
 
@@ -18,8 +25,10 @@ npm install
 keeping the two products out of each other's way. The file is the source of
 truth: append new sections and re-run them, same convention as the wedding app.
 
-It seeds one group, slug `jakarta`, join code `DEUCE`. **Change that code before
-sharing the link.**
+It seeds one group, slug `jakarta`, with a **randomly generated** join code — the
+code is never written in this repo. Read it once with
+`select slug, join_code from public.tennis_groups;` and share the invite link
+from the app instead.
 
 **2. Environment.** `.env.local` is already populated from the wedding project.
 For a fresh checkout, copy `.env.example` and fill in the service-role key.

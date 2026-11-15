@@ -9,7 +9,6 @@ interface Opponent {
   id: string;
   name: string;
   emoji: string;
-  winChance: number;
 }
 
 /**
@@ -20,11 +19,9 @@ interface Opponent {
  * removes the contradiction rather than validating it.
  */
 export function LogForm({
-  meId,
   opponents,
   format,
 }: {
-  meId: string;
   opponents: Opponent[];
   format: MatchFormat;
 }) {
@@ -39,7 +36,6 @@ export function LogForm({
 
   return (
     <form action={action} className="grid gap-6 lg:grid-cols-2 lg:items-start">
-      <input type="hidden" name="meId" value={meId} />
       <input type="hidden" name="opponentId" value={opponentId} />
 
       <fieldset className="lg:col-span-1">
@@ -67,9 +63,6 @@ export function LogForm({
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-semibold">{o.name}</span>
-                  <span className="nums block text-xs text-[var(--color-muted)]">
-                    {o.winChance}% your odds
-                  </span>
                 </span>
               </button>
             );
