@@ -2,11 +2,11 @@
 
 import { useActionState } from "react";
 import { joinAction } from "../actions";
+import { Avatar } from "@/components/avatar";
 
 interface Choice {
   id: string;
   name: string;
-  emoji: string;
 }
 
 export function JoinForm({
@@ -14,14 +14,16 @@ export function JoinForm({
   unlocked,
   wrongCode,
   code,
+  next,
 }: {
   players: Choice[];
   unlocked: boolean;
   wrongCode: boolean;
   code: string;
+  next: string;
 }) {
-  if (!unlocked) return <CodeStep wrongCode={wrongCode} />;
-  return <IdentityStep players={players} code={code} />;
+  if (!unlocked) return <CodeStep wrongCode={wrongCode} next={next} />;
+  return <IdentityStep players={players} code={code} next={next} />;
 }
 
 /**
@@ -31,11 +33,12 @@ export function JoinForm({
  * No placeholder here on purpose: it used to show the real code, which was the
  * actual live code printed on the page.
  */
-function CodeStep({ wrongCode }: { wrongCode: boolean }) {
+function CodeStep({ wrongCode, next }: { wrongCode: boolean; next: string }) {
   return (
     <form method="get" action="/join" className="space-y-4">
+      {next !== "/" && <input type="hidden" name="next" value={next} />}
       <label className="block space-y-1.5">
-        <span className="text-sm font-semibold">Group code</span>
+        <span className="eyebrow text-muted">Group code</span>
         <input
           name="c"
           required
@@ -43,18 +46,18 @@ function CodeStep({ wrongCode }: { wrongCode: boolean }) {
           autoCapitalize="characters"
           autoComplete="off"
           aria-invalid={wrongCode || undefined}
-          className="nums w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-3 text-lg uppercase tracking-widest outline-none focus:border-[var(--color-clay)]"
+          className="nums w-full rounded-xl border border-line bg-bg px-4 py-3.5 text-center text-2xl font-semibold uppercase tracking-[0.3em] outline-none focus:border-clay"
         />
       </label>
 
       {wrongCode && (
-        <p className="text-sm text-[var(--color-loss)]">
+        <p className="text-sm text-loss">
           That code isn&apos;t right. Ask whoever sent you the link.
         </p>
       )}
 
-      <button className="w-full rounded-xl bg-[var(--color-clay)] px-4 py-3.5 font-bold text-white">
-        Continue
+      <button className="btn btn-clay w-full">
+        Continue <span aria-hidden>→</span>
       </button>
     </form>
   );
@@ -69,33 +72,34 @@ function CodeStep({ wrongCode }: { wrongCode: boolean }) {
  * past a list of strangers' names first. Taking an existing slot is a single
  * tap below it, so someone who was pre-registered is one step from done.
  */
-function IdentityStep({ players, code }: { players: Choice[]; code: string }) {
+function IdentityStep({ players, code, next }: { players: Choice[]; code: string; next: string }) {
   return (
     <div className="space-y-6">
-      <AddMe code={code} />
+      <AddMe code={code} next={next} />
 
       {players.length > 0 && (
         <div className="space-y-3">
-          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-            <span className="h-px flex-1 bg-[var(--color-line)]" />
+          <div className="eyebrow flex items-center gap-3 text-muted">
+            <span className="h-px flex-1 bg-line" />
             or you&apos;re already on the list
-            <span className="h-px flex-1 bg-[var(--color-line)]" />
+            <span className="h-px flex-1 bg-line" />
           </div>
-          <PickSlot players={players} code={code} />
+          <PickSlot players={players} code={code} next={next} />
         </div>
       )}
     </div>
   );
 }
 
-function AddMe({ code }: { code: string }) {
+function AddMe({ code, next }: { code: string; next: string }) {
   const [state, action, pending] = useActionState(joinAction, {});
 
   return (
-    <form action={action} className="space-y-3 rounded-2xl border-2 border-[var(--color-clay)]/50 bg-[var(--color-surface)] p-5">
+    <form action={action} className="space-y-3">
       <input type="hidden" name="code" value={code} />
+      <input type="hidden" name="next" value={next} />
       <label className="block space-y-1.5">
-        <span className="text-base font-bold">Add yourself</span>
+        <span className="eyebrow text-muted">Add yourself</span>
         <input
           name="newName"
           required
@@ -103,18 +107,18 @@ function AddMe({ code }: { code: string }) {
           maxLength={24}
           autoComplete="given-name"
           placeholder="Your name"
-          className="w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-bg)] px-3 py-3 text-lg outline-none focus:border-[var(--color-clay)]"
+          className="w-full rounded-xl border border-line bg-bg px-4 py-3.5 text-lg outline-none focus:border-clay"
         />
-        <span className="block text-xs text-[var(--color-muted)]">
+        <span className="block text-xs text-muted">
           However the group knows you — this is the name on the record.
         </span>
       </label>
 
-      {state.error && <p className="text-sm text-[var(--color-loss)]">{state.error}</p>}
+      {state.error && <p className="text-sm text-loss">{state.error}</p>}
 
       <button
         disabled={pending}
-        className="w-full rounded-xl bg-[var(--color-clay)] px-4 py-3.5 font-bold text-white disabled:opacity-40"
+        className="btn btn-clay w-full disabled:opacity-40"
       >
         {pending ? "Joining…" : "Join the group"}
       </button>
@@ -123,16 +127,14 @@ function AddMe({ code }: { code: string }) {
 }
 
 /** One tap per slot: the button is the form's submit, carrying the player id. */
-function PickSlot({ players, code }: { players: Choice[]; code: string }) {
+function PickSlot({ players, code, next }: { players: Choice[]; code: string; next: string }) {
   const [state, action, pending] = useActionState(joinAction, {});
 
   return (
     <form action={action} className="space-y-2">
       <input type="hidden" name="code" value={code} />
-      <p className="text-xs text-[var(--color-muted)]">
-        Tap your name. Slots like &ldquo;A&rdquo; or &ldquo;B&rdquo; are placeholders — you can put
-        your real name on yours straight after.
-      </p>
+      <input type="hidden" name="next" value={next} />
+      <p className="text-xs text-muted">Tap your name to sign in as you.</p>
       <div className="grid grid-cols-2 gap-2">
         {players.map((p) => (
           <button
@@ -140,14 +142,14 @@ function PickSlot({ players, code }: { players: Choice[]; code: string }) {
             name="playerId"
             value={p.id}
             disabled={pending}
-            className="flex items-center gap-2 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-3 text-left text-sm font-semibold hover:border-[var(--color-clay)] disabled:opacity-50"
+            className="flex min-w-0 items-center gap-2.5 rounded-full border border-line bg-surface py-1.5 pl-1.5 pr-3 text-left text-sm font-semibold transition-colors hover:border-clay hover:bg-clay-soft/60 disabled:opacity-50"
           >
-            <span aria-hidden>{p.emoji}</span>
+            <Avatar id={p.id} name={p.name} size={32} />
             <span className="truncate">{p.name}</span>
           </button>
         ))}
       </div>
-      {state.error && <p className="text-sm text-[var(--color-loss)]">{state.error}</p>}
+      {state.error && <p className="text-sm text-loss">{state.error}</p>}
     </form>
   );
 }

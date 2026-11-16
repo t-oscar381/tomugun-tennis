@@ -37,3 +37,12 @@ export const EXAMPLE_SLUG = "example";
  * per-season before ranks are shown to a group this small.
  */
 export const SHOW_RANKS = false;
+
+/**
+ * The one link that gets someone into this group: the join page with the code
+ * already in it. This is what goes in the group chat and inside the QR code.
+ */
+export function inviteUrl(joinCode: string): string {
+  const site = process.env.SITE_URL ?? "https://play-tennis.tomugun.com";
+  return `${site}/join?c=${encodeURIComponent(joinCode)}`;
+}

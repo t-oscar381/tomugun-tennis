@@ -7,14 +7,14 @@ export default function NotFound() {
         🎾
       </p>
       <h1 className="mt-4 text-2xl font-bold tracking-tight">Out.</h1>
-      <p className="mt-2 text-[var(--color-muted)]">
-        That page isn&apos;t here. The player may have left the league, or the link is wrong.
+      <p className="mt-2 text-muted">
+        That page isn&apos;t here. The player may have left the group, or the link is wrong.
       </p>
       <Link
         href="/"
-        className="mt-6 inline-block rounded-xl bg-[var(--color-clay)] px-5 py-3 font-bold text-white"
+        className="mt-6 inline-block rounded-xl bg-clay px-5 py-3 font-bold text-white"
       >
-        Back to the ladder
+        Back to the scoreboard
       </Link>
     </div>
   );

@@ -13,7 +13,16 @@ import { useState } from "react";
  * The code is visible here on purpose: it belongs to anyone already in the
  * league, and someone will inevitably want to read it out loud courtside.
  */
-export function InviteCard({ inviteUrl, code }: { inviteUrl: string; code: string }) {
+export function InviteCard({
+  inviteUrl,
+  code,
+  qr,
+}: {
+  inviteUrl: string;
+  code: string;
+  /** A server-rendered QR of the invite link. */
+  qr?: React.ReactNode;
+}) {
   const [copied, setCopied] = useState(false);
 
   const message = `Join our tennis group 🎾\n\nAdd your name and log who wins:\n${inviteUrl}`;
@@ -31,15 +40,25 @@ export function InviteCard({ inviteUrl, code }: { inviteUrl: string; code: strin
   };
 
   return (
-    <section className="space-y-3 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
+    <section className="card space-y-3 p-5">
       <div>
-        <h2 className="font-bold">Invite the group</h2>
-        <p className="text-sm text-[var(--color-muted)]">
+        <h2 className="text-xl">Invite the group</h2>
+        <p className="text-sm text-muted">
           One link. They tap it, pick a name, and they&apos;re playing.
         </p>
       </div>
 
-      <p className="nums break-all rounded-lg bg-[var(--color-bg)] px-3 py-2 text-xs text-[var(--color-muted)]">
+      {qr && (
+        <a href="/invite" className="flex items-center gap-4 rounded-2xl bg-bg p-3">
+          <span className="block w-24 shrink-0 overflow-hidden rounded-xl border border-line">{qr}</span>
+          <span className="text-sm">
+            <span className="block font-bold">Standing next to them?</span>
+            <span className="text-muted">Let them scan this. Tap to show it full screen.</span>
+          </span>
+        </a>
+      )}
+
+      <p className="nums break-all rounded-lg bg-bg px-3 py-2 text-xs text-muted">
         {inviteUrl}
       </p>
 
@@ -48,21 +67,21 @@ export function InviteCard({ inviteUrl, code }: { inviteUrl: string; code: strin
           href={`https://wa.me/?text=${encodeURIComponent(message)}`}
           target="_blank"
           rel="noopener"
-          className="flex-1 rounded-lg bg-[var(--color-win)] px-3 py-2.5 text-center text-sm font-bold text-white"
+          className="flex-1 rounded-full bg-win px-3 py-2.5 text-center text-sm font-bold text-white"
         >
           Share on WhatsApp
         </a>
         <button
           type="button"
           onClick={copy}
-          className="rounded-lg border border-[var(--color-line)] px-3 py-2.5 text-sm font-semibold"
+          className="rounded-full border border-line px-4 py-2.5 text-sm font-semibold"
         >
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
 
-      <p className="text-xs text-[var(--color-muted)]">
-        Code: <span className="nums font-semibold text-[var(--color-ink)]">{code}</span> — anyone
+      <p className="text-xs text-muted">
+        Code: <span className="nums font-semibold text-ink">{code}</span> — anyone
         with this link can join, so keep it to the group.
       </p>
     </section>

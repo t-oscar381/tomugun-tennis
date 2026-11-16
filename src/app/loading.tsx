@@ -8,18 +8,18 @@
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true" aria-label="Loading">
-      <div className="h-28 animate-pulse rounded-2xl bg-[var(--color-surface)]" />
+      <div className="h-28 animate-pulse rounded-3xl bg-surface-2" />
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem] lg:items-start">
         <div className="space-y-2">
           {Array.from({ length: 6 }, (_, i) => (
             <div
               key={i}
-              className="h-16 animate-pulse rounded-xl bg-[var(--color-surface)]"
+              className="h-16 animate-pulse rounded-2xl bg-surface-2"
               style={{ animationDelay: `${i * 60}ms` }}
             />
           ))}
         </div>
-        <div className="h-40 animate-pulse rounded-xl bg-[var(--color-surface)]" />
+        <div className="h-40 animate-pulse rounded-2xl bg-surface-2" />
       </div>
     </div>
   );

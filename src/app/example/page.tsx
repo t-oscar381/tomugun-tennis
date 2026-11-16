@@ -4,7 +4,9 @@ import { byDay, losers, pointsTable, teamName, winners } from "@/lib/games";
 import { getGames } from "@/lib/gamesdb";
 import { relativeDay } from "@/lib/dates";
 import { EXAMPLE_SLUG } from "@/lib/league";
-import { PointsTable } from "@/components/points-table";
+import { SHOTS } from "@/lib/photos";
+import { Banner } from "@/components/photo";
+import { Podium, PointsTable } from "@/components/points-table";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Example season" };
@@ -20,14 +22,14 @@ export default async function ExamplePage() {
   const group = await getGroupBySlug(EXAMPLE_SLUG);
   if (!group) {
     return (
-      <p className="rounded-xl border border-dashed border-[var(--color-line)] p-6 text-sm text-[var(--color-muted)]">
+      <p className="rounded-xl border border-dashed border-line p-6 text-sm text-muted">
         There&apos;s no example set up at the moment.
       </p>
     );
   }
 
   const [players, games] = await Promise.all([getPlayers(group.id), getGames(group.id)]);
-  const people = players.map((p) => ({ id: p.id, name: p.name, emoji: p.emoji }));
+  const people = players.map((p) => ({ id: p.id, name: p.name }));
   const nameOf = (id: string) => players.find((p) => p.id === id)?.name ?? "?";
 
   // Only the people who actually played: the sample league has a few stray rows.
@@ -35,38 +37,35 @@ export default async function ExamplePage() {
   const days = byDay(games);
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-2">
-        <p className="inline-block rounded-full bg-[var(--color-clay-soft)] px-3 py-1 text-xs font-bold uppercase tracking-wide text-[var(--color-clay)]">
-          Sample data — not real people
-        </p>
-        <h1 className="text-2xl font-bold tracking-tight">An example season</h1>
-        <p className="max-w-2xl text-[var(--color-muted)]">
-          {table.length} made-up players and {games.length} doubles games over {days.length} weeks. In
-          every game the winning team&apos;s players get one point each.
-        </p>
-      </header>
+    <div className="space-y-8">
+      <Banner shot={SHOTS.hidden} eyebrow="Sample data — not real people" title="An example season">
+        {table.length} made-up players and {games.length} doubles games over {days.length} play days.
+        In every game the winning team&apos;s players get one point each.
+      </Banner>
 
       {games.length === 0 ? (
-        <p className="text-sm text-[var(--color-muted)]">The sample games haven&apos;t been set up yet.</p>
+        <p className="text-sm text-muted">The sample games haven&apos;t been set up yet.</p>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[1fr_20rem] lg:items-start">
-          <PointsTable rows={table} people={people} link={false} />
+        <div className="grid gap-8 lg:grid-cols-[1fr_21rem] lg:items-start">
+          <div className="space-y-5">
+            <Podium rows={table} people={people} link={false} />
+            <PointsTable rows={table} people={people} link={false} />
+          </div>
 
           <section className="space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+            <h2 className="eyebrow text-muted">
               Latest games
             </h2>
-            <ul className="space-y-2">
+            <ul className="card divide-y divide-line overflow-hidden">
               {games.slice(0, 10).map((g) => (
                 <li
                   key={g.id}
-                  className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+                  className="px-4 py-3 text-sm"
                 >
                   <span className="font-semibold">{teamName(winners(g), nameOf)}</span>
-                  <span className="text-[var(--color-muted)]"> beat </span>
+                  <span className="text-muted"> beat </span>
                   {teamName(losers(g), nameOf)}
-                  <span className="block text-xs text-[var(--color-muted)]">{relativeDay(g.date)}</span>
+                  <span className="block text-xs text-muted">{relativeDay(g.date)}</span>
                 </li>
               ))}
             </ul>
@@ -75,7 +74,7 @@ export default async function ExamplePage() {
       )}
 
       <p className="text-center text-sm">
-        <Link href="/" className="font-semibold text-[var(--color-clay)] underline">
+        <Link href="/" className="font-semibold text-clay underline">
           Back to the real group
         </Link>
       </p>

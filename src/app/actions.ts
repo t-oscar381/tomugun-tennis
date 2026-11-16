@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { safeNext } from "@/lib/next";
 import { redirect } from "next/navigation";
 import { db, getGroupBySlug, getPlayer, getPlayers, getTournament } from "@/lib/db";
 import { isIsoDate, jakartaDate } from "@/lib/dates";
@@ -20,6 +21,8 @@ export async function joinAction(_prev: State, form: FormData): Promise<State> {
   const code = String(form.get("code") ?? "");
   const playerId = String(form.get("playerId") ?? "");
   const newName = cleanName(String(form.get("newName") ?? ""));
+  // Someone who opened a link to a page they had to sign in for goes back to it.
+  const next = safeNext(form.get("next"));
 
   const group = await getGroupBySlug(GROUP_SLUG);
   if (!group) return { error: "League not found. Has supabase/schema.sql been run?" };
@@ -29,7 +32,7 @@ export async function joinAction(_prev: State, form: FormData): Promise<State> {
     const player = await getPlayer(playerId);
     if (!player || player.group_id !== group.id) return { error: "Unknown player." };
     await setSessionPlayer(player.id);
-    redirect("/");
+    redirect(next);
   }
 
   const bad = nameError(newName);
@@ -49,7 +52,7 @@ export async function joinAction(_prev: State, form: FormData): Promise<State> {
   if (error) return { error: error.message };
 
   await setSessionPlayer(data.id as string);
-  redirect("/");
+  redirect(next);
 }
 
 /**

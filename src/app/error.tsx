@@ -11,17 +11,17 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
   return (
     <div className="mx-auto max-w-md py-16 text-center">
       <h1 className="text-2xl font-bold tracking-tight">That didn&apos;t load.</h1>
-      <p className="mt-2 text-[var(--color-muted)]">
+      <p className="mt-2 text-muted">
         Something went wrong reaching the league. It&apos;s usually temporary.
       </p>
       <button
         onClick={reset}
-        className="mt-6 rounded-xl bg-[var(--color-clay)] px-5 py-3 font-bold text-white"
+        className="mt-6 rounded-xl bg-clay px-5 py-3 font-bold text-white"
       >
         Try again
       </button>
       {error.digest && (
-        <p className="nums mt-4 text-xs text-[var(--color-muted)]">Reference: {error.digest}</p>
+        <p className="nums mt-4 text-xs text-muted">Reference: {error.digest}</p>
       )}
     </div>
   );

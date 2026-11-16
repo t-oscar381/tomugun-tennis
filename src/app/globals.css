@@ -2,35 +2,37 @@
 
 /**
  * ─── BRAND PALETTE ────────────────────────────────────────────────────────
- * Light theme. The dark court-green version read as heavy and made scores
- * hard to scan outdoors in sunlight, which is exactly when this app gets
- * used. Swap the four brand values to re-skin; everything else derives.
+ * A clubhouse, not a dashboard: warm paper, deep court green, clay as the one
+ * loud colour, and a tennis-ball lime that only ever appears on dark green.
+ * Light theme because this gets used courtside in full sun.
  */
 @theme {
-  --color-clay: #e8791b; /* primary action. Deepened from #ff902a so white-on-clay clears AA */
-  --color-clay-soft: #fff1e3; /* tinted fill for selected states */
-  --color-court: #0a523d; /* deep green — headings and the dark button */
+  --color-clay: #d9661a; /* primary action */
+  --color-clay-deep: #b64f0d; /* hover / pressed */
+  --color-clay-soft: #fdeede; /* tinted fill for selected states */
+  --color-court: #0b3d2e; /* deep green — dark sections, the second team */
+  --color-court-deep: #062a20;
+  --color-court-soft: #e6efe9;
+  --color-lime: #d9f25c; /* accent on dark green only */
   --color-sand: #e3c394;
+  --color-gold: #b98a2c;
 
-  /* ── Surfaces. Warm, very slightly green paper so white cards lift off it. */
-  --color-bg: #f5f7f3;
+  /* ── Surfaces. Warm paper so white cards lift off it. */
+  --color-bg: #f7f4ee;
   --color-surface: #ffffff;
-  --color-surface-2: #eef3ea;
-  --color-line: #dde5d9;
+  --color-surface-2: #f1ede4;
+  --color-line: #e4ded1;
 
   /* ── Text. Near-black with a green cast rather than pure grey. */
   --color-ink: #14281f;
-  --color-muted: #64756a;
+  --color-muted: #66736b;
 
-  /* ── State. On a light ground, green/red finally mean what people expect —
-   * the dark theme had to avoid green because it vanished into the court. */
   --color-win: #17853f;
-  --color-loss: #cc3b32;
+  --color-loss: #c5372e;
 
-  /* ── Rank tiers, darkened for contrast against white cards. */
+  /* ── Rank tiers (ranks are hidden, the components still compile against these). */
   --color-bronze: #a2652f;
   --color-silver: #6b7a83;
-  --color-gold: #a8790a;
   --color-platinum: #0f857a;
   --color-diamond: #2a63c9;
   --color-master: #bc1a55;
@@ -41,29 +43,118 @@ html {
   color: var(--color-ink);
   color-scheme: light;
   -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
 }
 
 body {
   font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
   padding-bottom: env(safe-area-inset-bottom);
+  /* The full-bleed sections are 100vw wide, which includes the scrollbar. */
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Headings carry the display face; body copy stays in Inter for legibility
-   at small sizes and for its tabular figures. */
+/* Headings carry the serif; everything that is a number or a control stays in
+   Inter for its tabular figures and legibility at small sizes. */
 h1,
 h2,
-h3 {
-  font-family: var(--font-display), var(--font-sans), ui-sans-serif, system-ui, sans-serif;
-  letter-spacing: -0.015em;
+h3,
+.display {
+  font-family: var(--font-display), ui-serif, Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-optical-sizing: auto;
 }
 
-/* Tabular figures wherever a score or RP appears, so numbers don't jitter. */
+/* Small-caps label above a heading or over a list. Always sans. */
+.eyebrow {
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
 .nums {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
 
-/* Visible focus for keyboard users, which a custom-styled app loses by default. */
+/* The one card. Soft two-layer shadow instead of a hard border doing all the work. */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 1.25rem;
+  box-shadow:
+    0 1px 2px rgb(20 40 31 / 0.04),
+    0 12px 28px -18px rgb(20 40 31 / 0.22);
+}
+
+/* Break out of the centred column to the full window width. */
+.bleed {
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+}
+
+/* Buttons. Big enough to hit with a sweaty thumb. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.875rem 1.5rem;
+  font-weight: 700;
+  transition:
+    background-color 0.15s,
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn-clay {
+  background: var(--color-clay);
+  color: #fff;
+  box-shadow: 0 10px 24px -12px rgb(217 102 26 / 0.8);
+}
+.btn-clay:hover {
+  background: var(--color-clay-deep);
+}
+.btn-ghost {
+  border: 1px solid rgb(255 255 255 / 0.45);
+  color: #fff;
+  backdrop-filter: blur(6px);
+  background: rgb(255 255 255 / 0.08);
+}
+.btn-ghost:hover {
+  background: rgb(255 255 255 / 0.18);
+}
+
+/* Photos zoom a touch when their card is hovered. */
+.zoom img {
+  transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.zoom:hover img {
+  transform: scale(1.04);
+}
+
+/* Entrance: content rises into place once, staggered with --d. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise {
+  animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+
 :focus-visible {
   outline: 2px solid var(--color-clay);
   outline-offset: 2px;

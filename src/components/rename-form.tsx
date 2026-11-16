@@ -17,17 +17,17 @@ export function RenameForm({ current }: { current: string }) {
             maxLength={24}
             defaultValue={current.length === 1 ? "" : current}
             placeholder="However the group knows you"
-            className="min-w-0 flex-1 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2.5 outline-none focus:border-[var(--color-clay)]"
+            className="min-w-0 flex-1 rounded-full border border-line bg-bg px-4 py-2.5 outline-none focus:border-clay"
           />
           <button
             disabled={pending}
-            className="rounded-lg bg-[var(--color-clay)] px-4 py-2.5 font-bold text-white disabled:opacity-40"
+            className="rounded-full bg-clay px-5 py-2.5 font-bold text-white disabled:opacity-40"
           >
             {pending ? "Saving…" : "Save"}
           </button>
         </div>
       </label>
-      {state.error && <p className="text-sm text-[var(--color-loss)]">{state.error}</p>}
+      {state.error && <p className="text-sm text-loss">{state.error}</p>}
     </form>
   );
 }
