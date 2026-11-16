@@ -101,6 +101,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   </Link>
                   <AccountMenu
                     name={session.player.name}
+                    pet={session.player.emoji}
                     playerId={session.player.id}
                     groupName={session.group.name}
                   />

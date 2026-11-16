@@ -79,7 +79,7 @@ export default async function HowPage() {
             No. A team can be one person or two, so one against one works too.
           </Faq>
           <Faq q="How do I change my name?">
-            Open the menu at the top right, choose <em>My points &amp; name</em>, type it and save.
+            Open the menu at the top right, choose <em>My points, name &amp; pet</em>, type it and save.
           </Faq>
         </div>
       </section>

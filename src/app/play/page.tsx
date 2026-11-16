@@ -46,7 +46,8 @@ export default async function PlayPage({ searchParams }: { searchParams: Promise
   const [players, all] = await Promise.all([getPlayers(session.group.id), getGames(session.group.id)]);
 
   const roster = [...players].sort((a, b) => a.name.localeCompare(b.name));
-  const people = roster.map((p) => ({ id: p.id, name: p.name }));
+  const people = roster.map((p) => ({ id: p.id, name: p.name, emoji: p.emoji }));
+  const petFor = (id: string) => players.find((p) => p.id === id)?.emoji;
   const nameOf = (id: string) => players.find((p) => p.id === id)?.name ?? "?";
 
   const games = all.filter((g) => g.date === date); // newest first
@@ -124,7 +125,7 @@ export default async function PlayPage({ searchParams }: { searchParams: Promise
                   </span>
                   <span className="flex shrink-0 -space-x-2">
                     {winners(g).map((id) => (
-                      <Avatar key={id} id={id} name={nameOf(id)} size={30} className="ring-2 ring-surface" />
+                      <Avatar key={id} id={id} name={nameOf(id)} pet={petFor(id)} size={34} className="ring-2 ring-surface" />
                     ))}
                   </span>
                   <p className="min-w-0 flex-1 text-sm">

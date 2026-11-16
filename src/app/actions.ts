@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { petValue } from "@/lib/pets";
 import { safeNext } from "@/lib/next";
 import { redirect } from "next/navigation";
 import { db, getGroupBySlug, getPlayer, getPlayers, getTournament } from "@/lib/db";
@@ -63,6 +64,21 @@ export async function joinAction(_prev: State, form: FormData): Promise<State> {
 export async function signOutAction(): Promise<void> {
   await clearSession();
   redirect("/");
+}
+
+/** Choose the pet that stands in for you. Stored in the `emoji` column as `pet:<id>`. */
+export async function setPetAction(form: FormData): Promise<void> {
+  const session = await getSession();
+  if (!session) redirect("/join");
+
+  const { error } = await db()
+    .from("tennis_players")
+    .update({ emoji: petValue(String(form.get("pet") ?? "")) })
+    .eq("id", session.player.id);
+  if (error) throw new Error(`setPet: ${error.message}`);
+
+  revalidatePath("/");
+  redirect(`/player/${session.player.id}?pet=1`);
 }
 
 /** Change your own display name. Placeholders like "A" are meant to be replaced. */

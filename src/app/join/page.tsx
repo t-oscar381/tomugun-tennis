@@ -52,7 +52,7 @@ export default async function JoinPage({
 
   // The roster is only ever sent to someone who already has the code.
   const players = unlocked
-    ? (await getPlayers(group.id)).map((p) => ({ id: p.id, name: p.name }))
+    ? (await getPlayers(group.id)).map((p) => ({ id: p.id, name: p.name, emoji: p.emoji }))
     : [];
 
   return (

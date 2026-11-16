@@ -8,6 +8,7 @@ import { Avatar } from "@/components/avatar";
 interface Person {
   id: string;
   name: string;
+  emoji?: string;
 }
 
 /**
@@ -188,7 +189,7 @@ function Team({
                 picked ? on : "border-line bg-surface hover:border-ink/30"
               }`}
             >
-              <Avatar id={p.id} name={p.name} size={30} />
+              <Avatar id={p.id} name={p.name} pet={p.emoji} size={34} />
               <span className="truncate">{p.name}</span>
             </button>
           );

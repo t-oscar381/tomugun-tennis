@@ -7,6 +7,7 @@ import { Avatar } from "@/components/avatar";
 interface Choice {
   id: string;
   name: string;
+  emoji?: string;
 }
 
 export function JoinForm({
@@ -144,7 +145,7 @@ function PickSlot({ players, code, next }: { players: Choice[]; code: string; ne
             disabled={pending}
             className="flex min-w-0 items-center gap-2.5 rounded-full border border-line bg-surface py-1.5 pl-1.5 pr-3 text-left text-sm font-semibold transition-colors hover:border-clay hover:bg-clay-soft/60 disabled:opacity-50"
           >
-            <Avatar id={p.id} name={p.name} size={32} />
+            <Avatar id={p.id} name={p.name} pet={p.emoji} size={34} />
             <span className="truncate">{p.name}</span>
           </button>
         ))}

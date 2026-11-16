@@ -29,7 +29,7 @@ export default async function ExamplePage() {
   }
 
   const [players, games] = await Promise.all([getPlayers(group.id), getGames(group.id)]);
-  const people = players.map((p) => ({ id: p.id, name: p.name }));
+  const people = players.map((p) => ({ id: p.id, name: p.name, emoji: p.emoji }));
   const nameOf = (id: string) => players.find((p) => p.id === id)?.name ?? "?";
 
   // Only the people who actually played: the sample league has a few stray rows.

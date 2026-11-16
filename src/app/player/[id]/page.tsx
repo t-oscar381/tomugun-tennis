@@ -17,6 +17,8 @@ import { getSession } from "@/lib/session";
 import { SHOTS } from "@/lib/photos";
 import { Avatar } from "@/components/avatar";
 import { Banner } from "@/components/photo";
+import { petOf } from "@/lib/pets";
+import { PetPicker } from "@/components/pet-picker";
 import { RenameForm } from "@/components/rename-form";
 import { signOutAction } from "../../actions";
 
@@ -40,10 +42,10 @@ export default async function PlayerPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ renamed?: string }>;
+  searchParams: Promise<{ renamed?: string; pet?: string }>;
 }) {
   const { id } = await params;
-  const { renamed } = await searchParams;
+  const { renamed, pet: petSaved } = await searchParams;
 
   const player = await getPlayer(id);
   if (!player) notFound();
@@ -53,6 +55,7 @@ export default async function PlayerPage({
 
   const [roster, all] = await Promise.all([getPlayers(player.group_id), getGames(player.group_id)]);
   const nameOf = (pid: string) => roster.find((p) => p.id === pid)?.name ?? "?";
+  const petFor = (pid: string) => roster.find((p) => p.id === pid)?.emoji;
 
   const mine = all.filter((g) => g.a.includes(id) || g.b.includes(id)); // newest first
   const row = pointsTable(all, roster.map((p) => p.id)).find((r) => r.id === id);
@@ -66,6 +69,9 @@ export default async function PlayerPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
+      {petSaved && (
+        <p className="rounded-xl border border-win/40 bg-win/10 px-4 py-3 text-sm">Picture saved.</p>
+      )}
       {renamed && (
         <p className="rounded-xl border border-win/40 bg-win/10 px-4 py-3 text-sm">
           Name saved.
@@ -77,7 +83,7 @@ export default async function PlayerPage({
         eyebrow={isMe ? "Your record" : "Player"}
         title={
           <span className="flex items-center gap-4">
-            <Avatar id={player.id} name={player.name} size={56} ring="var(--color-lime)" />
+            <Avatar id={player.id} name={player.name} pet={player.emoji} size={72} ring="var(--color-lime)" />
             <span className="truncate">{player.name}</span>
           </span>
         }
@@ -91,9 +97,14 @@ export default async function PlayerPage({
       />
 
       {isMe && (
-        <section className="card p-5">
-          <RenameForm current={player.name} />
-        </section>
+        <>
+          <section id="pet" className="card scroll-mt-24 p-5 sm:p-6">
+            <PetPicker playerId={player.id} name={player.name} current={petOf(player.emoji)} />
+          </section>
+          <section className="card p-5 sm:p-6">
+            <RenameForm current={player.name} />
+          </section>
+        </>
       )}
 
       {mine.length === 0 ? (
@@ -101,8 +112,8 @@ export default async function PlayerPage({
       ) : (
         <>
           <div className="grid gap-6 sm:grid-cols-2">
-            <Relations title="With" hint="Wins when partnered" list={partners} nameOf={nameOf} />
-            <Relations title="Against" hint="Wins when opposed" list={opponents} nameOf={nameOf} />
+            <Relations title="With" hint="Wins when partnered" list={partners} nameOf={nameOf} petFor={petFor} />
+            <Relations title="Against" hint="Wins when opposed" list={opponents} nameOf={nameOf} petFor={petFor} />
           </div>
 
           <section className="space-y-3">
@@ -186,11 +197,13 @@ function Relations({
   hint,
   list,
   nameOf,
+  petFor,
 }: {
   title: string;
   hint: string;
   list: Relation[];
   nameOf: (id: string) => string;
+  petFor: (id: string) => string | undefined;
 }) {
   return (
     <section className="space-y-3">
@@ -205,7 +218,7 @@ function Relations({
           {list.map((r) => (
             <li key={r.id} className="nums flex items-center justify-between gap-3 px-4 py-3 text-sm">
               <Link href={`/player/${r.id}`} className="flex min-w-0 items-center gap-2.5 font-semibold hover:underline">
-                <Avatar id={r.id} name={nameOf(r.id)} size={28} />
+                <Avatar id={r.id} name={nameOf(r.id)} pet={petFor(r.id)} size={32} />
                 <span className="truncate">{nameOf(r.id)}</span>
               </Link>
               <span className="text-muted">

@@ -16,17 +16,19 @@ import { Avatar } from "./avatar";
  */
 export function AccountMenu({
   name,
+  pet,
   playerId,
   groupName,
 }: {
   name: string;
+  pet?: string;
   playerId: string;
   groupName: string;
 }) {
   return (
     <details className="group relative">
       <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-line bg-surface py-1 pl-1 pr-2.5 marker:hidden">
-        <Avatar id={playerId} name={name} size={32} />
+        <Avatar id={playerId} name={name} pet={pet} size={34} />
         <span className="hidden max-w-[9rem] truncate text-sm font-semibold sm:block">{name}</span>
         <span aria-hidden className="text-xs text-muted transition-transform group-open:rotate-180">
           ▾
@@ -36,7 +38,7 @@ export function AccountMenu({
 
       <div className="card absolute right-0 z-20 mt-2 w-64 overflow-hidden !shadow-xl">
         <div className="flex items-center gap-3 border-b border-line bg-surface-2/60 p-4">
-          <Avatar id={playerId} name={name} size={44} />
+          <Avatar id={playerId} name={name} pet={pet} size={48} />
           <div className="min-w-0">
             <p className="eyebrow text-muted">Signed in as</p>
             <p className="truncate font-bold">{name}</p>
@@ -45,7 +47,7 @@ export function AccountMenu({
         </div>
 
         <Link href={`/player/${playerId}`} className="block px-4 py-3 text-sm hover:bg-surface-2">
-          My points &amp; name
+          My points, name &amp; pet
         </Link>
         <Link href="/invite" className="block px-4 py-3 text-sm hover:bg-surface-2">
           Invite someone (QR code)

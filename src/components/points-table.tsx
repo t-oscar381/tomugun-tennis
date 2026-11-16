@@ -5,6 +5,7 @@ import { Avatar } from "./avatar";
 interface Person {
   id: string;
   name: string;
+  emoji?: string;
 }
 
 const MEDAL = ["var(--color-gold)", "var(--color-silver)", "var(--color-bronze)"];
@@ -50,7 +51,7 @@ export function PointsTable({
                 {i + 1}
               </span>
               <span className="flex min-w-0 flex-1 items-center gap-3">
-                <Avatar id={r.id} name={p?.name ?? "?"} size={38} ring={medal} />
+                <Avatar id={r.id} name={p?.name ?? "?"} pet={p?.emoji} size={38} ring={medal} />
                 <span className="min-w-0">
                   <span className="flex items-center gap-1.5">
                     <span className="truncate font-semibold">{p?.name ?? "?"}</span>
@@ -98,6 +99,7 @@ export function Podium({ rows, people, link = true }: { rows: Row[]; people: Per
     <ol className="grid grid-cols-3 items-start gap-2.5 sm:gap-4">
       {order.map((r, i) => {
         const name = byId.get(r.id)?.name ?? "?";
+        const pet = byId.get(r.id)?.emoji;
         const first = place[i] === 1;
         return (
           <li key={r.id} className={lift[i]}>
@@ -113,7 +115,8 @@ export function Podium({ rows, people, link = true }: { rows: Row[]; people: Per
               <Avatar
                 id={r.id}
                 name={name}
-                size={first ? 60 : 48}
+                pet={pet}
+                size={first ? 68 : 54}
                 ring={first ? "var(--color-lime)" : MEDAL[place[i]! - 1]}
                 className="mt-3"
               />

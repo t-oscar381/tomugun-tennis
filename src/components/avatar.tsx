@@ -1,3 +1,5 @@
+import { petOf, petSrc } from "@/lib/pets";
+
 /**
  * A monogram in place of a photo.
  *
@@ -45,15 +47,38 @@ export function Avatar({
   name,
   size = 36,
   ring,
+  pet,
   className = "",
 }: {
   id: string;
   name: string;
+  /** The player's stored `emoji` value. A chosen pet shows its face; anything else, initials. */
+  pet?: string | null;
   size?: number;
   /** A CSS colour for an outer ring (the podium uses gold / silver / bronze). */
   ring?: string;
   className?: string;
 }) {
+  const petId = petOf(pet);
+  if (petId) {
+    return (
+      <span
+        aria-hidden
+        className={`inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full ${className}`}
+        style={{
+          width: size,
+          height: size,
+          background: `color-mix(in oklab, ${toneFor(id)} 16%, white)`,
+          boxShadow: ring
+            ? `0 0 0 3px var(--color-surface), 0 0 0 5px ${ring}`
+            : `inset 0 0 0 1px color-mix(in oklab, ${toneFor(id)} 30%, transparent)`,
+        }}
+      >
+        <img src={petSrc(petId)} alt="" width={size} height={size} className="size-[92%] translate-y-[4%] object-contain" />
+      </span>
+    );
+  }
+
   return (
     <span
       aria-hidden

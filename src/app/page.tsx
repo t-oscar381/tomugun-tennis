@@ -4,6 +4,7 @@ import { jakartaDate, relativeDay } from "@/lib/dates";
 import { losers, pointsTable, teamName, winRate, winners, type Row } from "@/lib/games";
 import { getGames } from "@/lib/gamesdb";
 import { EXAMPLE_SLUG, GROUP_SLUG, inviteUrl } from "@/lib/league";
+import { petOf, petSrc } from "@/lib/pets";
 import { SHOTS } from "@/lib/photos";
 import { getSession } from "@/lib/session";
 import { Avatar } from "@/components/avatar";
@@ -31,8 +32,9 @@ export default async function HomePage() {
   const { group, player } = session;
   const [players, games] = await Promise.all([getPlayers(group.id), getGames(group.id)]);
 
-  const people = players.map((p) => ({ id: p.id, name: p.name }));
+  const people = players.map((p) => ({ id: p.id, name: p.name, emoji: p.emoji }));
   const nameOf = (id: string) => players.find((p) => p.id === id)?.name ?? "?";
+  const petFor = (id: string) => players.find((p) => p.id === id)?.emoji;
 
   const table = pointsTable(games, players.map((p) => p.id));
   const mine = table.find((r) => r.id === player.id);
@@ -55,13 +57,31 @@ export default async function HomePage() {
         </section>
       )}
 
+      {!placeholder && !petOf(player.emoji) && (
+        <Link
+          href={`/player/${player.id}#pet`}
+          className="card flex items-center gap-4 p-4 transition-colors hover:border-clay"
+        >
+          <span className="flex shrink-0 -space-x-3">
+            {["pomeranian", "french-bulldog", "dachshund"].map((id) => (
+              <img key={id} src={petSrc(id)} alt="" className="size-12 rounded-full border-2 border-surface bg-surface-2 object-contain" />
+            ))}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-bold">Pick your pet</span>
+            <span className="block text-sm text-muted">Choose the face that shows next to your name.</span>
+          </span>
+          <span aria-hidden className="text-clay">→</span>
+        </Link>
+      )}
+
       {/* ── You, on a court. */}
       <section className="rise relative isolate overflow-hidden rounded-3xl bg-court-deep text-white shadow-[0_24px_48px_-28px_rgb(6_42_32/0.7)]">
         <Photo shot={SHOTS.lines} w={1100} eager className="absolute inset-0 -z-20 size-full object-cover" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-court-deep/95 via-court-deep/80 to-court-deep/30" />
         <div className="flex flex-wrap items-end justify-between gap-6 p-6 sm:p-9">
           <div className="flex min-w-0 items-center gap-4">
-            <Avatar id={player.id} name={player.name} size={64} ring="var(--color-lime)" />
+            <Avatar id={player.id} name={player.name} pet={player.emoji} size={72} ring="var(--color-lime)" />
             <div className="min-w-0">
               <p className="eyebrow text-lime">{group.name}</p>
               <h1 className="mt-1 truncate text-3xl leading-tight sm:text-5xl">{player.name}</h1>
@@ -131,7 +151,7 @@ export default async function HomePage() {
               <ul className="divide-y divide-line">
                 {todayRows.map((r) => (
                   <li key={r.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
-                    <Avatar id={r.id} name={nameOf(r.id)} size={28} />
+                    <Avatar id={r.id} name={nameOf(r.id)} pet={petFor(r.id)} size={30} />
                     <span className="flex-1 truncate font-semibold">{nameOf(r.id)}</span>
                     <span className="display nums text-xl">{r.points}</span>
                   </li>
@@ -275,7 +295,7 @@ async function Welcome() {
                 {sample.rows.map((r, i) => (
                   <li key={r.id} className="flex items-center gap-3 px-4 py-3">
                     <span className="nums w-5 text-center text-sm font-bold text-muted">{i + 1}</span>
-                    <Avatar id={r.id} name={sample.nameOf(r.id)} size={36} />
+                    <Avatar id={r.id} name={sample.nameOf(r.id)} pet={sample.petFor(r.id)} size={40} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-semibold">{sample.nameOf(r.id)}</span>
                       <span className="nums block text-xs text-muted">
@@ -309,7 +329,12 @@ async function Welcome() {
 }
 
 /** The top of the example group's table, to show a real board on the front page. */
-async function sampleBoard(): Promise<{ rows: Row[]; games: number; nameOf: (id: string) => string } | null> {
+async function sampleBoard(): Promise<{
+  rows: Row[];
+  games: number;
+  nameOf: (id: string) => string;
+  petFor: (id: string) => string | undefined;
+} | null> {
   try {
     const group = await getGroupBySlug(EXAMPLE_SLUG);
     if (!group) return null;
@@ -319,6 +344,7 @@ async function sampleBoard(): Promise<{ rows: Row[]; games: number; nameOf: (id:
       rows: pointsTable(games).slice(0, 5),
       games: games.length,
       nameOf: (id) => players.find((p) => p.id === id)?.name ?? "?",
+      petFor: (id) => players.find((p) => p.id === id)?.emoji,
     };
   } catch {
     // The front page must never fail because the sample data is missing.
