@@ -16,7 +16,7 @@ import { useState } from "react";
 export function InviteCard({ inviteUrl, code }: { inviteUrl: string; code: string }) {
   const [copied, setCopied] = useState(false);
 
-  const message = `Join our tennis group 🎾\n\nPick your slot and log your matches:\n${inviteUrl}`;
+  const message = `Join our tennis group 🎾\n\nAdd your name and log who wins:\n${inviteUrl}`;
 
   const copy = async () => {
     try {

@@ -1,104 +1,189 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getMatches, getPlayers, listPlayDays, sessionsReady } from "@/lib/db";
-import { dateOf, jakartaDate, relativeDay } from "@/lib/dates";
+import { getPlayers } from "@/lib/db";
+import { formatDayLong, formatTime, isIsoDate, jakartaDate, relativeDay, shiftDate } from "@/lib/dates";
+import {
+  byDay,
+  dayText,
+  losers,
+  pointsTable,
+  teamName,
+  winners,
+} from "@/lib/games";
+import { getGames } from "@/lib/gamesdb";
 import { getSession } from "@/lib/session";
 import { AddPlayerForm } from "@/components/add-player-form";
-import { PlaySetup } from "@/components/play-setup";
-import { StartPlayDay } from "./start-play-day";
+import { PointsTable } from "@/components/points-table";
+import { removeGameAction } from "@/app/actions";
+import { GameLog } from "./game-log";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Play days" };
+export const metadata = { title: "Log a game" };
 
-export default async function PlayDaysPage() {
+/**
+ * The day's page: log games, see the day's points, undo a mistake.
+ *
+ * There is one court, so there is one day at a time and it is this page. It
+ * opens on today; `?d=` moves to another date, for logging last night's games
+ * this morning or checking what happened last week.
+ */
+export default async function PlayPage({ searchParams }: { searchParams: Promise<{ d?: string }> }) {
   const session = await getSession();
   if (!session) redirect("/join");
 
-  if (!(await sessionsReady())) return <PlaySetup />;
-
-  const { group } = session;
+  const { d } = await searchParams;
   const today = jakartaDate();
+  // Tomorrow is allowed — it is already tomorrow in Jakarta before it is in UTC — but no further.
+  const date = d && isIsoDate(d) && d <= shiftDate(today, 1) ? d : today;
 
-  const [players, days, recent] = await Promise.all([
-    getPlayers(group.id),
-    listPlayDays(group.id),
-    getMatches(group.id, { limit: 500, status: "confirmed" }),
-  ]);
+  const [players, all] = await Promise.all([getPlayers(session.group.id), getGames(session.group.id)]);
 
-  const perDay = new Map<string, number>();
-  for (const m of recent) {
-    const d = dateOf(m.played_at);
-    perDay.set(d, (perDay.get(d) ?? 0) + 1);
-  }
-
-  const todays = days.find((d) => d.played_on === today);
   const roster = [...players].sort((a, b) => a.name.localeCompare(b.name));
-  // Last time's crowd is the best guess for this time's.
-  const lastCrowd = days.find((d) => d.played_on !== today)?.attendees ?? [];
-  const known = new Set(players.map((p) => p.id));
+  const people = roster.map((p) => ({ id: p.id, name: p.name, emoji: p.emoji }));
+  const nameOf = (id: string) => players.find((p) => p.id === id)?.name ?? "?";
+
+  const games = all.filter((g) => g.date === date); // newest first
+  const dayRows = pointsTable(games);
+  const share = dayText(date, games, nameOf);
+
+  const others = byDay(all)
+    .filter((day) => day.date !== date)
+    .slice(0, 12);
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">Play days</h1>
-        <p className="text-[var(--color-muted)]">
-          One per date. Tick who turned up, then log the night&apos;s matches against it — someone
-          resting can do the logging for everyone.
-        </p>
+      <header className="space-y-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{relativeDay(date)}</h1>
+          <p className="text-sm text-[var(--color-muted)]">{formatDayLong(date)}</p>
+        </div>
+        <nav className="flex flex-wrap items-center gap-2 text-sm">
+          <Link
+            href={`/play?d=${shiftDate(date, -1)}`}
+            className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 font-semibold"
+          >
+            ← Day before
+          </Link>
+          {date !== today && (
+            <Link
+              href="/play"
+              className="rounded-lg bg-[var(--color-clay)] px-3 py-2 font-bold text-white"
+            >
+              Back to today
+            </Link>
+          )}
+          {date < today && (
+            <Link
+              href={`/play?d=${shiftDate(date, 1)}`}
+              className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 font-semibold"
+            >
+              Day after →
+            </Link>
+          )}
+        </nav>
       </header>
 
-      {todays && (
-        <Link
-          href={`/play/${todays.id}`}
-          className="flex items-center justify-between gap-3 rounded-2xl bg-[var(--color-clay)] px-5 py-4 text-white"
-        >
-          <span>
-            <span className="block text-lg font-bold">Today&apos;s play day</span>
-            <span className="nums block text-sm opacity-90">
-              {todays.attendees.length} here · {perDay.get(today) ?? 0} matches logged
-            </span>
-          </span>
-          <span className="font-bold">Open &amp; log →</span>
-        </Link>
+      {players.length < 2 ? (
+        <p className="rounded-2xl border border-dashed border-[var(--color-line)] p-6 text-sm text-[var(--color-muted)]">
+          You need at least two people in the group to log a game. Add someone below.
+        </p>
+      ) : (
+        <GameLog players={people} date={date} />
       )}
 
       <section className="space-y-3">
-        <h2 className="text-lg font-bold">{todays ? "Start another date" : "Start a play day"}</h2>
-        <StartPlayDay
-          players={roster.map((p) => ({ id: p.id, name: p.name, emoji: p.emoji }))}
-          defaultDate={today}
-          defaultIds={lastCrowd.filter((id) => known.has(id))}
-          maxDate={jakartaDate(new Date(Date.now() + 24 * 3600 * 1000))}
-        />
-      </section>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+            Games · <span className="nums">{games.length}</span>
+          </h2>
+          {games.length > 0 && (
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(share)}`}
+              target="_blank"
+              rel="noopener"
+              className="rounded-lg bg-[var(--color-win)] px-3 py-2 text-xs font-bold text-white"
+            >
+              Share on WhatsApp
+            </a>
+          )}
+        </div>
 
-      <section className="space-y-3 rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
-        <h2 className="font-bold">Someone missing from the list?</h2>
-        <AddPlayerForm label="Add a player" />
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-          Past play days
-        </h2>
-        {days.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-[var(--color-line)] p-4 text-sm text-[var(--color-muted)]">
-            None yet. The first one you start will show up here.
-          </p>
+        {games.length === 0 ? (
+          <p className="text-sm text-[var(--color-muted)]">Nothing logged for this day yet.</p>
         ) : (
-          <ul className="divide-y divide-[var(--color-line)] overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)]">
-            {days.map((d) => (
-              <li key={d.id}>
-                <Link href={`/play/${d.id}`} className="flex items-center justify-between gap-3 px-4 py-3">
-                  <span className="font-semibold">{relativeDay(d.played_on)}</span>
-                  <span className="nums text-sm text-[var(--color-muted)]">
-                    {d.attendees.length} here · {perDay.get(d.played_on) ?? 0} matches
-                  </span>
-                </Link>
+          <ul className="space-y-2">
+            {games.map((g) => (
+              <li
+                key={g.id}
+                className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2.5"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 text-sm">
+                    <span className="font-semibold">{teamName(winners(g), nameOf)}</span>
+                    <span className="text-[var(--color-muted)]"> beat </span>
+                    {teamName(losers(g), nameOf)}
+                    <span className="nums mt-0.5 block text-xs text-[var(--color-muted)]">
+                      {formatTime(g.createdAt)} · logged by {nameOf(g.loggedBy)}
+                    </span>
+                  </p>
+                  {/* Two taps, so a stray touch can't delete a result. */}
+                  <details className="shrink-0 text-right">
+                    <summary className="cursor-pointer list-none text-xs text-[var(--color-muted)] underline marker:hidden">
+                      Remove
+                    </summary>
+                    <form action={removeGameAction} className="mt-1">
+                      <input type="hidden" name="gameId" value={g.id} />
+                      <button className="rounded-md bg-[var(--color-loss)] px-2.5 py-1 text-xs font-bold text-white">
+                        Yes, remove it
+                      </button>
+                    </form>
+                  </details>
+                </div>
               </li>
             ))}
           </ul>
         )}
+      </section>
+
+      {dayRows.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+            Points this day
+          </h2>
+          <PointsTable rows={dayRows} people={people} meId={session.player.id} />
+        </section>
+      )}
+
+      {others.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+            Other days
+          </h2>
+          <ul className="divide-y divide-[var(--color-line)] overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)]">
+            {others.map((day) => {
+              const top = pointsTable(day.games)[0];
+              return (
+                <li key={day.date}>
+                  <Link
+                    href={`/play?d=${day.date}`}
+                    className="flex items-center justify-between gap-3 px-4 py-3"
+                  >
+                    <span className="font-semibold">{relativeDay(day.date)}</span>
+                    <span className="nums text-sm text-[var(--color-muted)]">
+                      {day.games.length} {day.games.length === 1 ? "game" : "games"}
+                      {top ? ` · top: ${nameOf(top.id)} ${top.points}` : ""}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      <section className="space-y-3 rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
+        <h2 className="font-bold">Someone missing?</h2>
+        <AddPlayerForm label="Add a player" />
       </section>
     </div>
   );

@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     template: "%s · Tomugun Tennis",
   },
   description:
-    "Play your normal friendly matches, log the score, and keep a record everyone can see.",
+    "Play your usual games, tap who won, and keep points everyone can see.",
   applicationName: "Tomugun Tennis",
   appleWebApp: { capable: true, title: "Tennis", statusBarStyle: "default" },
   // The link gets pasted into WhatsApp — that is the entire growth loop for a
@@ -43,14 +43,14 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "Tomugun Tennis",
     title: "Tomugun Tennis",
-    description: "Log a friendly match, keep the record.",
+    description: "Tap who won, keep the points.",
     url: SITE,
     images: [{ url: photo(HERO.id, 1200), width: 1200, height: 800, alt: HERO.alt }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Tomugun Tennis",
-    description: "Log a friendly match, keep the record.",
+    description: "Tap who won, keep the points.",
     images: [photo(HERO.id, 1200)],
   },
 };
@@ -94,45 +94,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   </Link>
                   <Link
                     href="/play"
-                    className="hidden px-1 text-[var(--color-muted)] hover:text-[var(--color-ink)] sm:block"
-                  >
-                    Play days
-                  </Link>
-                  <Link
-                    href="/tournaments"
-                    className="hidden px-1 text-[var(--color-muted)] hover:text-[var(--color-ink)] sm:block"
-                  >
-                    Tournaments
-                  </Link>
-                  <Link
-                    href="/formats"
-                    className="hidden px-1 text-[var(--color-muted)] hover:text-[var(--color-ink)] lg:block"
-                  >
-                    Ways to play
-                  </Link>
-                  <Link
-                    href="/log"
                     className="rounded-full bg-[var(--color-clay)] px-4 py-2 font-bold text-white"
                   >
-                    Log a match
+                    Log a game
                   </Link>
                   <AccountMenu
                     name={session.player.name}
                     emoji={session.player.emoji}
                     playerId={session.player.id}
-                    wins={session.player.wins}
-                    losses={session.player.losses}
                     groupName={session.group.name}
                   />
                 </>
               ) : (
                 <>
-                  <Link
-                    href="/formats"
-                    className="hidden px-1 text-[var(--color-muted)] hover:text-[var(--color-ink)] sm:block"
-                  >
-                    Ways to play
-                  </Link>
                   <Link
                     href="/how"
                     className="px-1 text-[var(--color-muted)] hover:text-[var(--color-ink)]"

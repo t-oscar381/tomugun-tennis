@@ -2,28 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import {
-  db,
-  getGroupBySlug,
-  getPlayer,
-  getPlayers,
-  getTournament,
-  ratingPeriodOf,
-} from "@/lib/db";
+import { db, getGroupBySlug, getPlayer, getPlayers, getTournament } from "@/lib/db";
 import { isIsoDate, jakartaDate } from "@/lib/dates";
 import { buildBracket, champion, setWinner, type Entrant } from "@/lib/engine/bracket";
-import { parseScoreline } from "@/lib/engine/scoreline";
-import { GROUP_SLUG, formatFor } from "@/lib/league";
+import { GROUP_SLUG } from "@/lib/league";
 import { cleanName, nameError, nameTaken } from "@/lib/names";
-import { getPlayDay } from "@/lib/db";
-import { matchesOn, openPlayDay, recordMatch, removeMatch, setPresent } from "@/lib/playday";
-import { confirmMatch, runRatingPeriods, winChance } from "@/lib/rating";
+import { recordGame, removeGame } from "@/lib/gamesdb";
 import { clearSession, codeMatches, getSession, setSessionPlayer } from "@/lib/session";
 
 type State = { error?: string };
 
-/** For the play-day forms: a confirmation to show, and a stamp so the client can tell a new one. */
-type PlayState = { error?: string; ok?: string; stamp?: number };
+/** For forms that confirm what they did: a message, and a stamp so the client can tell a new one from an old one. */
+type DoneState = { error?: string; ok?: string; stamp?: number };
 
 /** Join the league: check the code, then claim (or create) a player. */
 export async function joinAction(_prev: State, form: FormData): Promise<State> {
@@ -72,99 +62,6 @@ export async function signOutAction(): Promise<void> {
   redirect("/");
 }
 
-/**
- * Log a finished match. The result is stored `pending` and moves nothing until
- * the opponent confirms — an unverified ledger is worse than no ladder at all.
- */
-export async function logMatchAction(_prev: State, form: FormData): Promise<State> {
-  const oppId = String(form.get("opponentId") ?? "");
-  const raw = String(form.get("score") ?? "");
-
-  // Who is logging comes from the session cookie. It used to be a hidden form
-  // field, which let anyone log a result as anyone else.
-  const session = await getSession();
-  if (!session) return { error: "Sign in first." };
-  const { group, player: me } = session;
-
-  if (!oppId) return { error: "Pick an opponent." };
-  if (me.id === oppId) return { error: "You can't play yourself." };
-
-  const opponent = await getPlayer(oppId);
-  if (!opponent || opponent.group_id !== group.id) {
-    return { error: "That player isn't in this league." };
-  }
-
-  const format = formatFor(group);
-  const parsed = parseScoreline(raw, format);
-  if (!parsed.ok) return { error: parsed.error };
-
-  // The winner comes from the score itself. The form used to ask separately
-  // and then reject the answer when the two disagreed; there is only one
-  // question worth asking, so there is now only one answer to be wrong.
-  const iWon = parsed.value.winner === "A";
-
-  const winProbA = winChance(me, opponent);
-
-  const { error } = await db()
-    .from("tennis_matches")
-    .insert({
-      group_id: group.id,
-      player_a: me.id,
-      player_b: opponent.id,
-      winner_id: iWon ? me.id : opponent.id,
-      sets: parsed.value.sets,
-      scoreline: raw.trim(),
-      games_a: parsed.value.gamesA,
-      games_b: parsed.value.gamesB,
-      win_prob_a: winProbA,
-      logged_by: me.id,
-      rating_period: ratingPeriodOf(new Date()),
-    });
-
-  if (error) return { error: error.message };
-
-  revalidatePath("/");
-  redirect("/?logged=1");
-}
-
-/** A match the signed-in player took part in, or null. */
-async function myMatch(matchId: string) {
-  const session = await getSession();
-  if (!session || !matchId) return null;
-  const { data } = await db()
-    .from("tennis_matches")
-    .select("id, player_a, player_b, logged_by, status, group_id")
-    .eq("id", matchId)
-    .maybeSingle();
-  if (!data || data.group_id !== session.group.id) return null;
-  const me = session.player.id;
-  if (data.player_a !== me && data.player_b !== me) return null;
-  return { match: data, me };
-}
-
-/**
- * The opponent agrees the result is right. Only the player who did NOT log it
- * may confirm — otherwise "your opponent has to agree" is a suggestion, not a
- * rule. (The 48-hour auto-confirm calls confirmMatch directly.)
- */
-export async function confirmAction(form: FormData): Promise<void> {
-  const found = await myMatch(String(form.get("matchId") ?? ""));
-  if (!found || found.match.logged_by === found.me) return;
-
-  await confirmMatch(found.match.id as string);
-  revalidatePath("/");
-}
-
-export async function disputeAction(form: FormData): Promise<void> {
-  const found = await myMatch(String(form.get("matchId") ?? ""));
-  if (!found || found.match.status !== "pending") return;
-
-  // Disputes are deliberately a dead end rather than an edit flow: the two
-  // players sort it out and re-log.
-  await db().from("tennis_matches").update({ status: "disputed" }).eq("id", found.match.id);
-  revalidatePath("/");
-}
-
 /** Change your own display name. Placeholders like "A" are meant to be replaced. */
 export async function renameAction(_prev: State, form: FormData): Promise<State> {
   const session = await getSession();
@@ -188,21 +85,6 @@ export async function renameAction(_prev: State, form: FormData): Promise<State>
   revalidatePath("/");
   redirect(`/player/${session.player.id}?renamed=1`);
 }
-
-/** Fold closed weeks into Glicko-2. Safe to call repeatedly; it's a no-op once caught up. */
-export async function recalcAction(): Promise<void> {
-  const group = await getGroupBySlug(GROUP_SLUG);
-  if (!group) return;
-  await runRatingPeriods(group.id);
-  revalidatePath("/");
-}
-
-export async function listPlayers() {
-  const group = await getGroupBySlug(GROUP_SLUG);
-  if (!group) return [];
-  return getPlayers(group.id);
-}
-
 
 // ── Tournaments ────────────────────────────────────────────────────────────
 
@@ -314,10 +196,10 @@ export async function deleteTournamentAction(form: FormData): Promise<void> {
 }
 
 
-// ── Play days ──────────────────────────────────────────────────────────────
+// ── Games ──────────────────────────────────────────────────────────────────
 
-/** Add a person to the league without signing in as them — and, from a play day, mark them here. */
-export async function addPlayerAction(_prev: PlayState, form: FormData): Promise<PlayState> {
+/** Add a person to the group without signing in as them. Eight people share one pool; the eighth turns up eventually. */
+export async function addPlayerAction(_prev: DoneState, form: FormData): Promise<DoneState> {
   const session = await getSession();
   if (!session) return { error: "Sign in first." };
 
@@ -328,25 +210,18 @@ export async function addPlayerAction(_prev: PlayState, form: FormData): Promise
     return { error: `There's already a ${name}.` };
   }
 
-  const { data, error } = await db()
-    .from("tennis_players")
-    .insert({ group_id: session.group.id, name })
-    .select("id")
-    .single();
+  const { error } = await db().from("tennis_players").insert({ group_id: session.group.id, name });
   if (error) return { error: error.message };
-
-  const sessionId = String(form.get("sessionId") ?? "");
-  if (sessionId) {
-    const day = await getPlayDay(sessionId);
-    if (day && day.group_id === session.group.id) await setPresent(day, data.id as string, true);
-  }
 
   revalidatePath("/", "layout");
   return { ok: `Added ${name}.`, stamp: Date.now() };
 }
 
-/** Start today's play day (or any date), with the people who turned up. */
-export async function startPlayDayAction(_prev: State, form: FormData): Promise<State> {
+/**
+ * Log who won a game. Anyone in the group can — there is one court and six
+ * people watching it — so identity matters only for "logged by".
+ */
+export async function logGameAction(_prev: DoneState, form: FormData): Promise<DoneState> {
   const session = await getSession();
   if (!session) return { error: "Sign in first." };
 
@@ -357,59 +232,15 @@ export async function startPlayDayAction(_prev: State, form: FormData): Promise<
     return { error: "That date hasn't happened yet." };
   }
 
-  const picked = [...new Set(form.getAll("attendee").map(String))];
-  if (picked.length < 2) return { error: "Tick at least two people who are here." };
+  const ids = (key: string) => String(form.get(key) ?? "").split(",").filter(Boolean);
+  const win = String(form.get("win") ?? "");
 
-  const roster = new Set((await getPlayers(session.group.id)).map((p) => p.id));
-  if (!picked.every((id) => roster.has(id))) return { error: "Someone isn't in this league." };
-
-  const result = await openPlayDay(session.group.id, date, picked, session.player.id);
-  if (!result.ok) return { error: result.error };
-
-  redirect(`/play/${result.day.id}`);
-}
-
-/** Tick someone as here, or not. */
-export async function togglePresentAction(form: FormData): Promise<void> {
-  const session = await getSession();
-  if (!session) return;
-
-  const day = await getPlayDay(String(form.get("sessionId") ?? ""));
-  if (!day || day.group_id !== session.group.id) return;
-
-  const playerId = String(form.get("playerId") ?? "");
-  const present = form.get("present") === "1";
-
-  const roster = new Set((await getPlayers(session.group.id)).map((p) => p.id));
-  if (!roster.has(playerId)) return;
-
-  // Someone who has already played tonight is, self-evidently, here.
-  if (!present) {
-    const played = (await matchesOn(session.group.id, day.played_on)).some(
-      (m) => m.player_a === playerId || m.player_b === playerId,
-    );
-    if (played) return;
-  }
-
-  await setPresent(day, playerId, present);
-  revalidatePath("/", "layout");
-}
-
-/** Log a result under a play day. Whoever is resting can do this for the others. */
-export async function logPlayDayMatchAction(_prev: PlayState, form: FormData): Promise<PlayState> {
-  const session = await getSession();
-  if (!session) return { error: "Sign in first." };
-
-  const day = await getPlayDay(String(form.get("sessionId") ?? ""));
-  if (!day || day.group_id !== session.group.id) return { error: "That play day isn't here." };
-
-  const result = await recordMatch({
+  const result = await recordGame({
     groupId: session.group.id,
-    day,
-    a: String(form.get("a") ?? ""),
-    b: String(form.get("b") ?? ""),
-    scoreline: String(form.get("score") ?? ""),
-    format: formatFor(session.group),
+    date,
+    a: ids("a"),
+    b: ids("b"),
+    win: win === "a" ? "a" : win === "b" ? "b" : ("" as "a"),
     loggedBy: session.player.id,
   });
   if (!result.ok) return { error: result.error };
@@ -418,10 +249,10 @@ export async function logPlayDayMatchAction(_prev: PlayState, form: FormData): P
   return { ok: result.text, stamp: Date.now() };
 }
 
-/** Take a result back out — anyone in the group can, because the room is the safeguard. */
-export async function removePlayDayMatchAction(form: FormData): Promise<void> {
+/** Take a game back out. Anyone can: the room is the safeguard, and it takes two taps. */
+export async function removeGameAction(form: FormData): Promise<void> {
   const session = await getSession();
   if (!session) return;
-  await removeMatch(session.group.id, String(form.get("matchId") ?? ""));
+  await removeGame(session.group.id, String(form.get("gameId") ?? ""));
   revalidatePath("/", "layout");
 }

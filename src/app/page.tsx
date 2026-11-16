@@ -1,76 +1,44 @@
 import Link from "next/link";
-import {
-  getDisputedFor,
-  getGroupBySlug,
-  getMatches,
-  getPendingFor,
-  getPlayDayByDate,
-  getPlayers,
-  sessionsReady,
-} from "@/lib/db";
-import { dateOf, jakartaDate } from "@/lib/dates";
+import { getGroupBySlug, getPlayers } from "@/lib/db";
+import { jakartaDate, relativeDay } from "@/lib/dates";
+import { losers, pointsTable, teamName, winners } from "@/lib/games";
+import { getGames } from "@/lib/gamesdb";
 import { GROUP_SLUG } from "@/lib/league";
-import { CONFIRM_WINDOW_HOURS, autoConfirmStale, hoursLeftToConfirm, runRatingPeriods } from "@/lib/rating";
 import { getSession } from "@/lib/session";
 import { InviteCard } from "@/components/invite-card";
+import { PointsTable } from "@/components/points-table";
 import { RenameForm } from "@/components/rename-form";
-import { ResultsList, Standings, flipSetToken } from "@/components/standings";
 import { FlowDiagram, Hero, JoinCta, PhotoStrip, Steps } from "@/components/how-it-works";
-import { confirmAction, disputeAction } from "./actions";
 
-// Every view here changes the moment a match is confirmed, so nothing is
+// Every view here changes the moment a game is logged, so nothing is
 // prerendered. (No runtime = "edge" — it breaks page loading under OpenNext.)
 export const dynamic = "force-dynamic";
 
-export default async function HomePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ logged?: string }>;
-}) {
+export default async function HomePage() {
   const session = await getSession();
   if (!session) return <Welcome />;
 
   const { group, player } = session;
-  const { logged } = await searchParams;
+  const [players, games] = await Promise.all([getPlayers(group.id), getGames(group.id)]);
 
-  // Silence counts as agreement once the dispute window lapses. Ratings are
-  // still folded in underneath even though ranks are hidden, so turning them
-  // on later needs no backfill. Called directly, not via a server action:
-  // revalidatePath during render throws.
-  await autoConfirmStale(group.id);
-  await runRatingPeriods(group.id);
+  const people = players.map((p) => ({ id: p.id, name: p.name, emoji: p.emoji }));
+  const nameOf = (id: string) => players.find((p) => p.id === id)?.name ?? "?";
 
-  const [players, pending, disputed, recent] = await Promise.all([
-    getPlayers(group.id),
-    getPendingFor(group.id, player.id),
-    getDisputedFor(group.id, player.id),
-    getMatches(group.id, { limit: 12, status: "confirmed" }),
-  ]);
-
-  const playDaysOn = await sessionsReady();
+  const table = pointsTable(games, players.map((p) => p.id));
+  const mine = table.find((r) => r.id === player.id);
   const today = jakartaDate();
-  const tonight = playDaysOn ? await getPlayDayByDate(group.id, today) : null;
-  const tonightMatches = recent.filter((m) => dateOf(m.played_at) === today).length;
-
-  const byId = new Map(players.map((p) => [p.id, p]));
-  // The roster starts as single letters; nudge whoever claimed one to put
-  // their real name on it.
+  const todays = games.filter((g) => g.date === today);
+  const todayRows = pointsTable(todays);
+  // The roster started as single letters; nudge whoever claimed one to put their real name on it.
   const placeholder = player.name.length === 1;
 
   return (
     <div className="space-y-6">
-      {logged && (
-        <p className="rounded-xl border border-[var(--color-clay)]/40 bg-[var(--color-clay-soft)] px-4 py-3 text-sm">
-          <strong className="font-semibold">Logged.</strong> Your opponent has to confirm it before
-          it counts — nudge them if they&apos;re slow.
-        </p>
-      )}
-
       {placeholder && (
         <section className="space-y-2 rounded-2xl border-2 border-[var(--color-clay)]/50 bg-[var(--color-surface)] p-5">
           <h2 className="font-bold">You&apos;re signed in as &ldquo;{player.name}&rdquo;</h2>
           <p className="text-sm text-[var(--color-muted)]">
-            That&apos;s a placeholder. Put your name on it so the others know who they played.
+            That&apos;s a placeholder. Put your name on it so the others know who scored.
           </p>
           <RenameForm current={player.name} />
         </section>
@@ -90,129 +58,51 @@ export default async function HomePage({
           </div>
         </div>
         <p className="nums text-right">
-          <span className="text-2xl font-bold">
-            {player.wins}–{player.losses}
+          <span className="text-3xl font-bold">{mine?.points ?? 0}</span>
+          <span className="block text-xs text-[var(--color-muted)]">
+            points · {mine?.played ?? 0} {mine?.played === 1 ? "game" : "games"}
           </span>
-          <span className="block text-xs text-[var(--color-muted)]">won – lost</span>
         </p>
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem] lg:items-start">
         <section className="space-y-3">
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-lg font-bold tracking-tight">Records</h2>
-            <span className="text-sm text-[var(--color-muted)]">{players.length} players</span>
+            <h2 className="text-lg font-bold tracking-tight">Points</h2>
+            <span className="text-sm text-[var(--color-muted)]">
+              {games.length} {games.length === 1 ? "game" : "games"} so far
+            </span>
           </div>
-          <Standings players={players} meId={player.id} />
+          <PointsTable rows={table} people={people} meId={player.id} />
         </section>
 
         <aside className="space-y-6">
-          {pending.length > 0 && (
-            <section className="space-y-3">
-              <div>
-                <h2 className="font-bold">Waiting on you</h2>
-                <p className="text-sm text-[var(--color-muted)]">
-                  Check the score is right. Anything you don&apos;t answer counts on its own after{" "}
-                  {CONFIRM_WINDOW_HOURS} hours.
-                </p>
-              </div>
-              {pending.map((m) => {
-                const opponentId = m.player_a === player.id ? m.player_b : m.player_a;
-                const iWon = m.winner_id === player.id;
-                const asWritten =
-                  m.player_a === player.id
-                    ? m.scoreline
-                    : m.scoreline.split(" ").map(flipSetToken).join(" ");
-                const left = hoursLeftToConfirm(m.created_at);
+          <Link href="/play" className="block rounded-xl bg-[var(--color-clay)] px-5 py-4 text-white">
+            <span className="flex items-center justify-between font-bold">
+              <span>Log a game</span>
+              <span aria-hidden>→</span>
+            </span>
+            <span className="nums mt-0.5 block text-sm opacity-90">
+              {todays.length === 0
+                ? "Nothing logged today yet"
+                : `${todays.length} ${todays.length === 1 ? "game" : "games"} logged today`}
+            </span>
+          </Link>
 
-                return (
-                  <div
-                    key={m.id}
-                    className="rounded-xl border-2 border-[var(--color-clay)]/50 bg-[var(--color-surface)] p-4"
-                  >
-                    <p className="text-sm">
-                      <span className="font-semibold">{byId.get(opponentId)?.name ?? "Someone"}</span>{" "}
-                      says{" "}
-                      <span
-                        className={`font-semibold ${
-                          iWon ? "text-[var(--color-win)]" : "text-[var(--color-loss)]"
-                        }`}
-                      >
-                        {iWon ? "you won" : "you lost"}
-                      </span>
-                    </p>
-                    <p className="nums mt-1 text-lg font-bold">{asWritten}</p>
-                    <p className="mt-1 text-xs text-[var(--color-muted)]">
-                      {left > 0
-                        ? `Counts automatically in ${left}h if you don't say otherwise.`
-                        : "About to count automatically."}
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <form action={confirmAction}>
-                        <input type="hidden" name="matchId" value={m.id} />
-                        <button className="rounded-lg bg-[var(--color-clay)] px-4 py-2 text-sm font-bold text-white">
-                          Yes, that&apos;s right
-                        </button>
-                      </form>
-                      <form action={disputeAction}>
-                        <input type="hidden" name="matchId" value={m.id} />
-                        <button className="rounded-lg border border-[var(--color-line)] px-4 py-2 text-sm text-[var(--color-muted)]">
-                          That&apos;s wrong
-                        </button>
-                      </form>
-                    </div>
-                  </div>
-                );
-              })}
-            </section>
-          )}
-
-          {disputed.length > 0 && (
-            <section className="space-y-2 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
-              <h2 className="font-bold">Needs re-logging</h2>
-              <p className="text-sm text-[var(--color-muted)]">
-                Someone said these scores were wrong, so they never counted. Agree on the score
-                and log it again.
-              </p>
-              <ul className="space-y-1.5 pt-1">
-                {disputed.map((m) => {
-                  const otherId = m.player_a === player.id ? m.player_b : m.player_a;
-                  return (
-                    <li key={m.id} className="nums text-sm text-[var(--color-muted)]">
-                      <span className="text-[var(--color-ink)]">
-                        {byId.get(otherId)?.name ?? "Someone"}
-                      </span>{" "}
-                      — {m.scoreline}
-                    </li>
-                  );
-                })}
+          {todayRows.length > 0 && (
+            <section className="space-y-2">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+                Today
+              </h2>
+              <ul className="space-y-1.5 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-3">
+                {todayRows.map((r) => (
+                  <li key={r.id} className="flex items-center justify-between text-sm">
+                    <span className="truncate font-semibold">{nameOf(r.id)}</span>
+                    <span className="nums font-bold">{r.points}</span>
+                  </li>
+                ))}
               </ul>
             </section>
-          )}
-
-          {playDaysOn ? (
-            <Link
-              href={tonight ? `/play/${tonight.id}` : "/play"}
-              className="block rounded-xl bg-[var(--color-clay)] px-5 py-4 text-white"
-            >
-              <span className="flex items-center justify-between font-bold">
-                <span>{tonight ? "Tonight's play day" : "Start today's play day"}</span>
-                <span aria-hidden>→</span>
-              </span>
-              <span className="nums mt-0.5 block text-sm opacity-90">
-                {tonight
-                  ? `${tonight.attendees.length} here · ${tonightMatches} logged — tap to log`
-                  : "Tick who turned up, then log the matches"}
-              </span>
-            </Link>
-          ) : (
-            <Link
-              href="/log"
-              className="flex items-center justify-between rounded-xl bg-[var(--color-clay)] px-5 py-4 font-bold text-white"
-            >
-              <span>Log a match</span>
-              <span aria-hidden>→</span>
-            </Link>
           )}
 
           <InviteCard
@@ -222,9 +112,25 @@ export default async function HomePage({
 
           <section className="space-y-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-              Recent results
+              Latest games
             </h2>
-            <ResultsList matches={recent} players={players} />
+            {games.length === 0 ? (
+              <p className="text-sm text-[var(--color-muted)]">No games yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {games.slice(0, 8).map((g) => (
+                  <li
+                    key={g.id}
+                    className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+                  >
+                    <span className="font-semibold">{teamName(winners(g), nameOf)}</span>
+                    <span className="text-[var(--color-muted)]"> beat </span>
+                    {teamName(losers(g), nameOf)}
+                    <span className="block text-xs text-[var(--color-muted)]">{relativeDay(g.date)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         </aside>
       </div>
@@ -267,7 +173,7 @@ async function Welcome() {
       <section className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
         <h2 className="font-bold">Want to see it with a season in it?</h2>
         <p className="mt-1 text-sm text-[var(--color-muted)]">
-          There&apos;s a sample league with made-up players and a hundred matches.
+          There&apos;s a sample group with made-up players and a few weeks of games.
         </p>
         <Link href="/example" className="mt-2 inline-block font-semibold text-[var(--color-clay)] underline">
           Look at the example
@@ -278,17 +184,17 @@ async function Welcome() {
 
       <section className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
-          <h3 className="font-bold">Nothing counts until both agree</h3>
+          <h3 className="font-bold">Anyone can log it</h3>
           <p className="text-sm text-[var(--color-muted)]">
-            Whoever logs the match, the other one has to confirm the score. No arguing with the
-            leaderboard later.
+            One court, six people watching. Whoever has their phone out taps who won — it
+            doesn&apos;t have to be someone in the game.
           </p>
         </div>
         <div className="space-y-2 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
-          <h3 className="font-bold">It keeps your head-to-heads</h3>
+          <h3 className="font-bold">It remembers who plays well together</h3>
           <p className="text-sm text-[var(--color-muted)]">
-            Every player page shows your record against each person in the group, so the
-            argument about who usually wins has an answer.
+            Every player page shows your record with each partner and against each opponent, so
+            the argument about who to pair up has an answer.
           </p>
         </div>
       </section>

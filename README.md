@@ -52,29 +52,26 @@ directly — it inserts matches as `pending` and then calls the *same*
 end-to-end proof that scoreline parsing, RP entry costs, repeat decay,
 placement seeding and weekly Glicko-2 all work against the live database.
 
-## Play days
+## Games (how the group actually plays)
 
-A play day is one date and whoever turned up (`tennis_sessions`: one row per
-group per date, attendees as a jsonb list of player ids). It exists because a
-night is five or six of an eight-person pool, and the person logging is often
-someone resting. `/play` starts one and lists past ones; `/play/<id>` is where
-the night is logged.
+The group plays casual doubles on one court and only cares who won. So the app
+records **teams and a winner, nothing else**: pick 1-2 people per side, tap the
+team that won, and everyone on it gets **1 point**. No tennis scores are typed.
+Anyone can log (the person resting usually does); anyone can remove a game
+(two taps). There is no confirmation step.
 
-- **Matches are filed by date, not by a foreign key.** A match belongs to the
-  play day whose Jakarta calendar date its `played_at` falls on, so
-  `tennis_matches` needed no new column. Dates are Jakarta time (UTC+7, no DST)
-  — see `src/lib/dates.ts` for why a Sunday-morning game must not land on
-  Saturday.
-- **No confirmation step for play-day results.** The room is the safeguard:
-  anyone can see a result and remove it. Totals are *rebuilt from the match
-  ledger* after every insert and delete (`src/lib/stats.ts`), which is what
-  makes removal exact. The two-person confirm flow remains only on the old
-  standalone `/log`, used until the table exists.
-- **Playing implies being there.** Logging for someone who wasn't ticked adds
-  them to the night rather than blocking the referee.
-- **Needs one table.** Until `tennis_sessions` exists the play-day screens show
-  the SQL to paste, and `/log` keeps working. `npm run selftest:playday` drives
-  the real code path against a throwaway group and deletes it afterwards.
+- **Stored in `tennis_matches`, no new table.** A game is a row whose `sets`
+  jsonb is `{v:1,kind:"game",a:[ids],b:[ids],win:"a"|"b"}`. Points are derived
+  from the games on every read (`src/lib/games.ts`), never stored, so removing
+  a game is exact. Legacy tennis-score rows are ignored.
+- **Filed by Jakarta date** (UTC+7, no DST — `src/lib/dates.ts`). `/play?d=...`
+  is a day; "Day before" lets you back-fill.
+- **Duplicate guard:** same teams + same winner within 90 s is refused.
+- `npm run seed:games` fills the `example` group (`-- --reset` to redo);
+  `npm run selftest:games` drives the real write path in a throwaway group and
+  deletes it.
+- The older rating engine (Glicko-2, tiers) and tournaments remain in
+  `src/lib/engine` but are not in the nav.
 
 ## How the ranking works
 
@@ -191,7 +188,7 @@ check it in `src/lib/session.ts`. No schema rewrite, no data migration.
 
 `npm test` covers the scoring engine, the score validator, the dispute window
 the rotation scheduler's fairness guarantees and the knockout bracket
-(79 tests). `npm run selftest` drives the real write path against the
+(93 tests). `npm run selftest` drives the real write path against the
 live database in a throwaway group.
 
 ## Deploying

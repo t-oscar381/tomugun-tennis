@@ -17,27 +17,27 @@ const STEPS = [
   {
     n: 1,
     title: "Join the group",
-    body: "Type the group code someone shared with you, then pick your slot and put your name on it. No password, no email.",
+    body: "Type the group code someone shared with you, then add your name. No password, no email.",
   },
   {
     n: 2,
-    title: "Play your match",
-    body: "Normal tennis, normal scoring. Play a set or three — however you usually play.",
+    title: "Play your game",
+    body: "Two against two, or one against one — however you usually play. Keep score on court the way you always do.",
   },
   {
     n: 3,
-    title: "Log the score",
-    body: "Tap Log a match, pick who you played, then tap the games each of you won. No typing, so you cannot fat-finger a 6-5.",
+    title: "Tap who won",
+    body: "Open Log a game, tap the people on each team, then tap the team that won. That's it — no score to type.",
   },
   {
     n: 4,
-    title: "They confirm it",
-    body: "Your opponent gets it on their home screen and taps to agree. Nothing counts until they do — that's what keeps the record honest.",
+    title: "Everyone on the winning team gets a point",
+    body: "Anyone can log it, even someone sitting out. Wrong tap? Remove it and log it again.",
   },
   {
     n: 5,
-    title: "It goes in the record",
-    body: "Wins, losses and your head-to-head against every player, kept for good.",
+    title: "Points add up",
+    body: "For the day and for good, with who you win with and who you beat.",
   },
 ];
 
@@ -45,16 +45,16 @@ const STEPS = [
 export function FlowDiagram() {
   const nodes = [
     { x: 8, l1: "Join the", l2: "group" },
-    { x: 198, l1: "Play, then", l2: "log the score" },
-    { x: 388, l1: "Opponent", l2: "confirms it" },
-    { x: 578, l1: "It goes in", l2: "the record" },
+    { x: 198, l1: "Play, then", l2: "tap who won" },
+    { x: 388, l1: "Winners get", l2: "a point each" },
+    { x: 578, l1: "Points add", l2: "up" },
   ];
 
   return (
     <svg
       viewBox="0 0 760 132"
       role="img"
-      aria-label="Flow: join the group, play and log the score, your opponent confirms it, it goes in the record."
+      aria-label="Flow: join the group, play then tap who won, the winners get a point each, points add up."
       className="hidden h-auto w-full sm:block"
     >
       <defs>
@@ -199,11 +199,11 @@ export function Hero({ groupName }: { groupName?: string }) {
         <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
           All your tennis,
           <br />
-          <span className="text-[var(--color-clay)]">one record book.</span>
+          <span className="text-[var(--color-clay)]">one scoreboard.</span>
         </h1>
         <p className="mt-2 max-w-sm text-sm text-[var(--color-ink)]/85">
-          {groupName ? `${groupName} — ` : ""}play your normal friendly matches, log the score in
-          ten seconds, and keep a record everyone can see.
+          {groupName ? `${groupName} — ` : ""}play your usual games, tap who won, and keep points
+          everyone can see.
         </p>
       </div>
     </div>

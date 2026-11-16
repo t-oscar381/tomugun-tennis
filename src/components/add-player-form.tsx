@@ -6,14 +6,13 @@ import { addPlayerAction } from "@/app/actions";
 /**
  * Add somebody to the group. The pool is bigger than any one night, and the
  * eighth person turns up eventually — they should not have to wait for the
- * link to be re-sent. From a play day it also marks them as here.
+ * link to be re-sent.
  */
-export function AddPlayerForm({ sessionId, label = "Add a player" }: { sessionId?: string; label?: string }) {
+export function AddPlayerForm({ label = "Add a player" }: { label?: string }) {
   const [state, action, pending] = useActionState(addPlayerAction, {});
 
   return (
     <form action={action} className="space-y-2">
-      {sessionId && <input type="hidden" name="sessionId" value={sessionId} />}
       <label className="block space-y-1.5">
         <span className="text-sm font-semibold">{label}</span>
         <div className="flex gap-2">

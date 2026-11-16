@@ -70,3 +70,17 @@ export function relativeDay(date: string, now: Date = new Date()): string {
   if (date === jakartaDate(new Date(now.getTime() - DAY_MS))) return "Yesterday";
   return formatDay(date);
 }
+
+/** The date `days` after (or before, if negative) a YYYY-MM-DD date. */
+export function shiftDate(date: string, days: number): string {
+  return new Date(new Date(`${date}T00:00:00Z`).getTime() + days * DAY_MS).toISOString().slice(0, 10);
+}
+
+/** "19:45", in Jakarta time. */
+export function formatTime(instant: string): string {
+  return new Date(instant).toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Jakarta",
+  });
+}

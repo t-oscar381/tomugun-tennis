@@ -18,15 +18,11 @@ export function AccountMenu({
   name,
   emoji,
   playerId,
-  wins,
-  losses,
   groupName,
 }: {
   name: string;
   emoji: string;
   playerId: string;
-  wins: number;
-  losses: number;
   groupName: string;
 }) {
   return (
@@ -53,16 +49,13 @@ export function AccountMenu({
             {name}
           </p>
           <p className="mt-1 text-xs text-[var(--color-muted)]">{groupName}</p>
-          <p className="nums mt-2 text-sm font-semibold">
-            {wins}–{losses} <span className="font-normal text-[var(--color-muted)]">won – lost</span>
-          </p>
         </div>
 
         <Link
           href={`/player/${playerId}`}
           className="block px-4 py-3 text-sm hover:bg-[var(--color-surface-2)]"
         >
-          My record &amp; name
+          My points &amp; name
         </Link>
         <Link href="/how" className="block px-4 py-3 text-sm hover:bg-[var(--color-surface-2)]">
           How it works

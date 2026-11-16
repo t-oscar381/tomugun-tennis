@@ -18,59 +18,58 @@ export default async function HowPage() {
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-bold">Writing the score</h2>
-        <div className="space-y-2 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-5 text-sm">
-          <p className="text-[var(--color-muted)]">
-            Always type <span className="text-[var(--color-ink)]">your own games first</span>, set
-            by set, with a space between sets.
+        <h2 className="text-lg font-bold">How points work</h2>
+        <div className="space-y-3 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-5 text-sm">
+          <p>
+            <span className="font-semibold">One game, one point each for the winners.</span>{" "}
+            <span className="text-[var(--color-muted)]">
+              If Tommy &amp; Val beat Rene &amp; Stephanie, Tommy and Val get 1 point each. Rene and
+              Stephanie get nothing, but it still counts as a game they played.
+            </span>
           </p>
-          <ul className="nums space-y-1.5 text-[var(--color-ink)]">
-            <li>
-              <span className="font-semibold">6-4 6-3</span>{" "}
-              <span className="text-[var(--color-muted)]">— straight sets</span>
-            </li>
-            <li>
-              <span className="font-semibold">7-6(4)</span>{" "}
-              <span className="text-[var(--color-muted)]">— tiebreak set, in brackets is what the LOSER scored</span>
-            </li>
-            <li>
-              <span className="font-semibold">6-4 3-6 [10-8]</span>{" "}
-              <span className="text-[var(--color-muted)]">— a deciding match tiebreak in square brackets</span>
-            </li>
-            <li>
-              <span className="font-semibold">4-6 2-6</span>{" "}
-              <span className="text-[var(--color-muted)]">— a loss, still your games first</span>
-            </li>
-          </ul>
           <p className="text-[var(--color-muted)]">
-            If you mistype something impossible the app will tell you rather than saving it.
+            Then if Val &amp; Koi play Tommy &amp; Rene and Tommy &amp; Rene win, Tommy has 2 points,
+            Val has 1, Rene has 1, Stephanie and Koi have 0. Partners change all the time — that&apos;s
+            the point.
           </p>
         </div>
       </section>
 
       <section className="space-y-3">
         <h2 className="text-lg font-bold">Questions people ask</h2>
-        <Faq q="I logged it — why isn't it in the record?">
-          Your opponent has to confirm it first. Until they do, nothing moves.
+        <Faq q="Do I type in the score?">
+          No. Play to 15, 30, 45 or whatever you like on court — the app only wants to know who won.
         </Faq>
-        <Faq q="Someone logged a match wrong.">
-          Tap <em>That&apos;s wrong</em> on your home screen. It gets thrown out, and whoever was
-          right logs it again.
+        <Faq q="Who can log a game?">
+          Anyone in the group, including someone sitting out. It doesn&apos;t have to be one of the
+          four playing, and it shows who logged each game.
+        </Faq>
+        <Faq q="Someone logged it wrong.">
+          Open the day, find the game, tap <em>Remove</em> and then <em>Yes, remove it</em>. Then log
+          it again the right way round. Points are worked out from the games, so they correct
+          themselves.
+        </Faq>
+        <Faq q="Two of us logged the same game.">
+          It only counts once. If the same teams and the same winner are logged within a minute and a
+          half, the second one is turned away.
+        </Faq>
+        <Faq q="Can I log yesterday's games?">
+          Yes. On the Log a game page, tap <em>Day before</em> to go back to any date.
+        </Faq>
+        <Faq q="Is it only doubles?">
+          No. A team can be one person or two, so one against one works too.
         </Faq>
         <Faq q="How do I change my name?">
-          Open the menu at the top right, choose <em>My record &amp; name</em>, type it and save.
-        </Faq>
-        <Faq q="Can I play doubles?">
-          Not yet — singles only for now.
+          Open the menu at the top right, choose <em>My points &amp; name</em>, type it and save.
         </Faq>
       </section>
 
       {session ? (
         <Link
-          href="/log"
+          href="/play"
           className="block w-full rounded-xl bg-[var(--color-clay)] px-4 py-3.5 text-center font-bold text-white"
         >
-          Log a match
+          Log a game
         </Link>
       ) : (
         <JoinCta />
