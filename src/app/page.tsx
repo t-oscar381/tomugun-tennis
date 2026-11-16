@@ -4,12 +4,13 @@ import { jakartaDate, relativeDay } from "@/lib/dates";
 import { losers, pointsTable, teamName, winRate, winners, type Row } from "@/lib/games";
 import { getGames } from "@/lib/gamesdb";
 import { EXAMPLE_SLUG, GROUP_SLUG, inviteUrl } from "@/lib/league";
-import { petOf, petSrc } from "@/lib/pets";
+import { hasChosenFace } from "@/lib/pets";
 import { SHOTS } from "@/lib/photos";
 import { getSession } from "@/lib/session";
 import { Avatar } from "@/components/avatar";
 import { ClosingCta, Features, Gallery, Steps } from "@/components/how-it-works";
 import { InviteCard } from "@/components/invite-card";
+import { PetPicker } from "@/components/pet-picker";
 import { Photo } from "@/components/photo";
 import { Qr } from "@/components/qr";
 import { Podium, PointsTable } from "@/components/points-table";
@@ -57,22 +58,17 @@ export default async function HomePage() {
         </section>
       )}
 
-      {!placeholder && !petOf(player.emoji) && (
-        <Link
-          href={`/player/${player.id}#pet`}
-          className="card flex items-center gap-4 p-4 transition-colors hover:border-clay"
-        >
-          <span className="flex shrink-0 -space-x-3">
-            {["pomeranian", "french-bulldog", "dachshund"].map((id) => (
-              <img key={id} src={petSrc(id)} alt="" className="size-12 rounded-full border-2 border-surface bg-surface-2 object-contain" />
-            ))}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block font-bold">Pick your pet</span>
-            <span className="block text-sm text-muted">Choose the face that shows next to your name.</span>
-          </span>
-          <span aria-hidden className="text-clay">→</span>
-        </Link>
+      {/* First thing after signing in: choose your face. Gone once you have one. */}
+      {!hasChosenFace(player.emoji) && (
+        <section className="card rise !border-clay/50 p-5 sm:p-6">
+          <PetPicker
+            playerId={player.id}
+            name={player.name}
+            current={null}
+            back="/"
+            title={`Welcome, ${player.name}. Pick your pet.`}
+          />
+        </section>
       )}
 
       {/* ── You, on a court. */}

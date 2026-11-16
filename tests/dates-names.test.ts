@@ -78,3 +78,21 @@ describe("names", () => {
     expect(nameError("Budi")).toBeNull();
   });
 });
+
+import { hasChosenFace, petOf, petValue } from "../src/lib/pets";
+
+describe("pets", () => {
+  it("round-trips a chosen pet through the stored value", () => {
+    expect(petOf(petValue("corgi"))).toBe("corgi");
+    expect(hasChosenFace(petValue("corgi"))).toBe(true);
+  });
+  it("treats the default emoji as not having chosen yet", () => {
+    expect(petOf("🎾")).toBeNull();
+    expect(hasChosenFace("🎾")).toBe(false);
+  });
+  it("remembers a skip, and never stores an unknown pet", () => {
+    expect(petOf(petValue("none"))).toBeNull();
+    expect(hasChosenFace(petValue("none"))).toBe(true);
+    expect(petValue("../etc")).toBe("initials");
+  });
+});

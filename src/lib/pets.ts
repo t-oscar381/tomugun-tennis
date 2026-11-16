@@ -55,9 +55,17 @@ export function petOf(stored: string | null | undefined): string | null {
   return IDS.has(id) ? id : null;
 }
 
-/** What to write to the column for a choice. An unknown id becomes "no pet". */
+/** Stored when someone says "just use my initials", so the front page stops asking. */
+const INITIALS = "initials";
+
+/** What to write to the column for a choice. Anything that isn't a pet means "initials". */
 export function petValue(id: string): string {
-  return IDS.has(id) ? PREFIX + id : "🎾";
+  return IDS.has(id) ? PREFIX + id : INITIALS;
+}
+
+/** Has this player answered the "pick your pet" question, either way? */
+export function hasChosenFace(stored: string | null | undefined): boolean {
+  return stored === INITIALS || petOf(stored) !== null;
 }
 
 export const petSrc = (id: string) => `/pets/${id}.webp`;

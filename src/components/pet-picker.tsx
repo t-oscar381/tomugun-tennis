@@ -6,11 +6,25 @@ import { Avatar } from "./avatar";
  * Choose your face. One tap: each pet is its own submit button, so there is no
  * "select, then save" — the same reasoning as the sign-in slots.
  */
-export function PetPicker({ playerId, name, current }: { playerId: string; name: string; current: string | null }) {
+export function PetPicker({
+  playerId,
+  name,
+  current,
+  back,
+  title = "Pick your pet",
+}: {
+  playerId: string;
+  name: string;
+  current: string | null;
+  /** Where to land after choosing. Defaults to your player page. */
+  back?: string;
+  title?: string;
+}) {
   return (
     <form action={setPetAction} className="space-y-4">
+      {back && <input type="hidden" name="back" value={back} />}
       <div>
-        <h2 className="text-xl">Pick your pet</h2>
+        <h2 className="text-xl">{title}</h2>
         <p className="mt-1 text-sm text-muted">
           Tap one and it becomes your picture everywhere — the scoreboard, the teams, the podium.
         </p>
@@ -42,7 +56,7 @@ export function PetPicker({ playerId, name, current }: { playerId: string; name:
         className="flex items-center gap-2.5 text-sm font-semibold text-muted hover:text-ink"
       >
         <Avatar id={playerId} name={name} size={30} />
-        Use my initials instead
+        {back ? "Skip — just use my initials" : "Use my initials instead"}
       </button>
     </form>
   );

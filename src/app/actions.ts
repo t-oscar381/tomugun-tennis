@@ -78,7 +78,8 @@ export async function setPetAction(form: FormData): Promise<void> {
   if (error) throw new Error(`setPet: ${error.message}`);
 
   revalidatePath("/");
-  redirect(`/player/${session.player.id}?pet=1`);
+  const back = form.get("back");
+  redirect(back ? safeNext(back) : `/player/${session.player.id}?pet=1`);
 }
 
 /** Change your own display name. Placeholders like "A" are meant to be replaced. */
